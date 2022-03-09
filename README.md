@@ -22,17 +22,12 @@ You can directly use the reusable workflows in this public repository per
 The GitHub Actions
 [Access to Reusable Workflows Documentation](https://docs.github.com/en/actions/using-workflows/reusing-workflows#access-to-reusable-workflows)
 
-Examples of using the reusable workflows in this repository can be found
-in the _Checks_ for this repository which call the reusable workflows.
+Examples of using and calling the reusable workflows in this repository
+can be found in the _Checks_ for this repository.  See...
+  * [.github/workflows/on_pr_checks.yml](https://github.com/brianjbayer/actions-image-cicd/blob/main/.github/workflows/on_pr_checks.yml)
 
-See...
-```
-.github/workflows/on_pr_checks.yml
-```
-and
-```
-.github/workflows/on_push_merge_checks.yml
-```
+  * [.github/workflows/on_push_merge_checks.yml](https://github.com/brianjbayer/actions-image-cicd/blob/main/.github/workflows/on_push_merge_checks.yml)
+
 
 ## Intended CI/CD Flow
 These workflows were developed specifically for a CI/CD flow where a commit
