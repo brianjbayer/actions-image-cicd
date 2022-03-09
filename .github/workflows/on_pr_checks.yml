@@ -1,0 +1,45 @@
+name: On PR Workflow Checks
+
+on:
+  pull_request:
+    branches:
+      - main
+
+env:
+  # These environment variables are for reference only in understanding image naming
+  # They (their values) are not available when calling reusable workflows
+  BRANCH: ${{ github.head_ref }}
+  COMMIT: ${{ github.event.pull_request.head.sha }}
+
+jobs:
+
+  check-git_github_info:
+    uses: brianjbayer/actions-image-cicd/.github/workflows/git_github_info.yml@main
+
+  check-build_push_image:
+    uses: brianjbayer/actions-image-cicd/.github/workflows/build_push_image.yml@main
+    with:
+      image: ${{ github.repository }}_${{ github.head_ref }}_test:${{ github.event.pull_request.head.sha }}
+    secrets:
+      registry_u: ${{ secrets.DOCKER_HUB_USERNAME }}
+      registry_p: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
+
+  check-pull_push_image:
+    needs: [check-build_push_image]
+    uses: brianjbayer/actions-image-cicd/.github/workflows/pull_push_image.yml@main
+    with:
+      pull_as: ${{ github.repository }}_${{ github.head_ref }}_test:${{ github.event.pull_request.head.sha }}
+      push_as: ${{ github.repository }}_${{ github.head_ref }}:${{ github.event.pull_request.head.sha }}
+    secrets:
+      registry_u: ${{ secrets.DOCKER_HUB_USERNAME }}
+      registry_p: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
+
+  check-pull_push_latest_image:
+    needs: [check-pull_push_image]
+    uses: brianjbayer/actions-image-cicd/.github/workflows/pull_push_latest_image.yml@main
+    with:
+      image_name: ${{ github.repository }}_${{ github.head_ref }}
+      image_tag: ${{ github.event.pull_request.head.sha }}
+    secrets:
+      registry_u: ${{ secrets.DOCKER_HUB_USERNAME }}
+      registry_p: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}

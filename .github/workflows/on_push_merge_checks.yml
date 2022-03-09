@@ -1,0 +1,56 @@
+name: On Push (Merge) Workflow Checks
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+
+# The get_merged_branch_last_commit workflow can really only be tested
+# on a merge commit
+  branch-and-last-commit:
+    uses: brianjbayer/actions-image-cicd/.github/workflows/get_merged_branch_last_commit.yml@main
+
+  branch-and-last-commit-merged-info:
+    needs: [branch-and-last-commit]
+    runs-on: ubuntu-latest
+    env:
+      BRANCH_LAST_COMMIT: ${{ needs.branch-and-last-commit.outputs.commit }}
+      BRANCH: ${{ needs.branch-and-last-commit.outputs.branch }}
+    steps:
+      - name: Output last commit of merged branch env var
+        run: echo "BRANCH_LAST_COMMIT=[${BRANCH_LAST_COMMIT}]"
+      - name: Output merged branch env var
+        run: echo "BRANCH=[${BRANCH}]"
+
+# Ensure last branch commit-tagged image exists
+# This should demonstrate impotence in the output
+# if the commit was created as part of PR job
+  ensure-last-branch-commit-image:
+    needs: [branch-and-last-commit]
+    uses: brianjbayer/actions-image-cicd/.github/workflows/build_push_image.yml@main
+    with:
+      image: ${{ github.repository }}_${{ needs.branch-and-last-commit.outputs.branch }}:${{ needs.branch-and-last-commit.outputs.commit }}
+    secrets:
+      registry_u: ${{ secrets.DOCKER_HUB_USERNAME }}
+      registry_p: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
+
+  promote-branch-last-commit-to-prod:
+    needs: [branch-and-last-commit, ensure-last-branch-commit-image]
+    uses: brianjbayer/actions-image-cicd/.github/workflows/pull_push_image.yml@main
+    with:
+      pull_as: ${{ github.repository }}_${{ needs.branch-and-last-commit.outputs.branch }}:${{ needs.branch-and-last-commit.outputs.commit }}
+      push_as: ${{ github.repository }}:${{ needs.branch-and-last-commit.outputs.commit }}
+    secrets:
+      registry_u: ${{ secrets.DOCKER_HUB_USERNAME }}
+      registry_p: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
+
+  promote-branch-last-commit-to-prod-latest:
+    needs: [branch-and-last-commit, promote-branch-last-commit-to-prod]
+    uses: brianjbayer/actions-image-cicd/.github/workflows/pull_push_latest_image.yml@main
+    with:
+      image_name: ${{ github.repository }}
+      image_tag: ${{ needs.branch-and-last-commit.outputs.commit }}
+    secrets:
+      registry_u: ${{ secrets.DOCKER_HUB_USERNAME }}
+      registry_p: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
