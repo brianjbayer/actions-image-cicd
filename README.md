@@ -7,7 +7,8 @@ These reusable actions are primarily designed to be used
 in another repository's Continuous Integration/Continuous Deployment
 (CI/CD) where the image is the deployable artifact.
 
-See [GitHub's Documentation on Reusable Actions](https://docs.github.com/en/actions/using-workflows/reusing-workflows).
+See [GitHub's Documentation on Reusable Actions](https://docs.github.com/en/actions/using-workflows/reusing-workflows)
+and the gist [The Basics of GitHub Actions Reusable Workflows](https://gist.github.com/brianjbayer/a1e73789fa26deda500c829d1b4d0d88).
 
 ## Intent of the Workflows
 These workflows were designed to be simple cohesive building blocks called
@@ -44,8 +45,14 @@ production.
 
 The image names in this intended CI are based upon the PR Branch and
 tagged with the commit.  While this information is easily available
-in GitHub PR Actions it is not so available in the Push (i.e. merge)
+in GitHub PR Actions, it is not so available in the Push (i.e. merge)
 Actions.
+
+> :eyes: To ensure that the branch-based image names are valid and
+> meet Docker's image name restrictions, use the
+> `normalize_for_image_name.yml` reusable workflow.  If the image
+> names are not valid, the images will not build and the CI/CD will
+> fail.
 
 With this intended CI/CD, there are two basic GitHub Actions workflows...
   * **On Pull Request...**
@@ -80,8 +87,11 @@ With this intended CI/CD, there are two basic GitHub Actions workflows...
        .github/workflows/pull_push_latest_image.yml@main
        ```
 
+For more on image-based CI/CD, see the gist
+[An Image-Based Continuous Integration / Continuous Deployment Model](https://gist.github.com/brianjbayer/e5e9f07e0923d8d097d7b03803ea837b).
+
 ## Testing
 When modifying/developing workflows in this repository, changes should
 be on a branch in this repository and tested (especially merge/on push
 related workflows) using another test bed repository to call these
-workflows).
+workflows.
