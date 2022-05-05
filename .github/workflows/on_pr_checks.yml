@@ -16,34 +16,6 @@ jobs:
   check-git_github_info:
     uses: brianjbayer/actions-image-cicd/.github/workflows/git_github_info.yml@main
 
-  check-build_push_image:
-    uses: brianjbayer/actions-image-cicd/.github/workflows/build_push_image.yml@main
-    with:
-      image: ${{ github.repository }}_${{ github.head_ref }}_test:${{ github.event.pull_request.head.sha }}
-    secrets:
-      registry_u: ${{ secrets.DOCKER_HUB_USERNAME }}
-      registry_p: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
-
-  check-pull_push_image:
-    needs: [check-build_push_image]
-    uses: brianjbayer/actions-image-cicd/.github/workflows/pull_push_image.yml@main
-    with:
-      pull_as: ${{ github.repository }}_${{ github.head_ref }}_test:${{ github.event.pull_request.head.sha }}
-      push_as: ${{ github.repository }}_${{ github.head_ref }}:${{ github.event.pull_request.head.sha }}
-    secrets:
-      registry_u: ${{ secrets.DOCKER_HUB_USERNAME }}
-      registry_p: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
-
-  check-pull_push_latest_image:
-    needs: [check-pull_push_image]
-    uses: brianjbayer/actions-image-cicd/.github/workflows/pull_push_latest_image.yml@main
-    with:
-      image_name: ${{ github.repository }}_${{ github.head_ref }}
-      image_tag: ${{ github.event.pull_request.head.sha }}
-    secrets:
-      registry_u: ${{ secrets.DOCKER_HUB_USERNAME }}
-      registry_p: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
-
   normalize-valid-image-name:
     uses: brianjbayer/actions-image-cicd/.github/workflows/normalize_for_image_name.yml@main
     with:
@@ -75,3 +47,37 @@ jobs:
         run: echo "NORM_NAME=[${NORM_NAME}]"
       - name: Verify normalized name
         run: test "$NORM_NAME" = 'dependabot-bundler-nokogiri-1-13-4'
+
+  pr-norm-branch:
+    uses: brianjbayer/actions-image-cicd/.github/workflows/normalize_for_image_name.yml@main
+    with:
+      raw_name: ${{ github.head_ref }}
+
+  check-build_push_image:
+    needs: [pr-norm-branch]
+    uses: brianjbayer/actions-image-cicd/.github/workflows/build_push_image.yml@main
+    with:
+      image: ${{ github.repository }}_${{ needs.pr-norm-branch.outputs.name }}_test:${{ github.event.pull_request.head.sha }}
+    secrets:
+      registry_u: ${{ secrets.DOCKER_HUB_USERNAME }}
+      registry_p: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
+
+  check-pull_push_image:
+    needs: [check-build_push_image, pr-norm-branch]
+    uses: brianjbayer/actions-image-cicd/.github/workflows/pull_push_image.yml@main
+    with:
+      pull_as: ${{ github.repository }}_${{ needs.pr-norm-branch.outputs.name }}_test:${{ github.event.pull_request.head.sha }}
+      push_as: ${{ github.repository }}_${{ needs.pr-norm-branch.outputs.name }}:${{ github.event.pull_request.head.sha }}
+    secrets:
+      registry_u: ${{ secrets.DOCKER_HUB_USERNAME }}
+      registry_p: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
+
+  check-pull_push_latest_image:
+    needs: [check-pull_push_image, pr-norm-branch]
+    uses: brianjbayer/actions-image-cicd/.github/workflows/pull_push_latest_image.yml@main
+    with:
+      image_name: ${{ github.repository }}_${{ needs.pr-norm-branch.outputs.name }}
+      image_tag: ${{ github.event.pull_request.head.sha }}
+    secrets:
+      registry_u: ${{ secrets.DOCKER_HUB_USERNAME }}
+      registry_p: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
