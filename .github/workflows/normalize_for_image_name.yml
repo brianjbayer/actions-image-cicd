@@ -1,0 +1,34 @@
+name: Normalize for Image Name
+
+on:
+  workflow_call:
+
+    inputs:
+      raw_name:
+        required: true
+        type: string
+    outputs:
+      name:
+        value: ${{ jobs.normalize-for-image-name.outputs.normed_name }}
+
+jobs:
+
+  normalize-for-image-name:
+    name: Normalize to ensure valid image name
+    runs-on: ubuntu-latest
+    outputs:
+      normed_name: ${{ steps.normalize.outputs.norm_name }}
+    env:
+      RAW_NAME: ${{ inputs.raw_name }}
+
+    steps:
+      - name: Normalize input
+        run: echo "Inputted RAW_NAME=[${RAW_NAME}]"
+
+      - id: normalize
+        # Normalization...
+        #  1. Convert non-alphanumeric to space and remove any duplicate spaces (tr -cs)
+        #  2. Convert any uppercase letters to lowercase (tr '[:upper:]' '[:lower:]')
+        #  3. Strip any leading and trailing spaces (xargs echo -n)
+        #  4. Convert spaces to dashes (tr ' ' '-')
+        run: echo "::set-output name=norm_name::$(echo "$RAW_NAME" | tr -cs '[:alnum:]' ' ' | tr '[:upper:]' '[:lower:]' | xargs echo -n | tr ' ' '-')"

@@ -21,11 +21,11 @@ jobs:
       - uses: actions/checkout@v1
 
       - name: Output get branch
-        run: echo "$(git log -1 --pretty=%B | awk -F '\\\\n' '{print $1}' |  awk -F '/' '{print $2}' | grep -v -e '^$')"
+        run: echo "$(git log -1 --pretty=%B | grep 'Merge pull request' | sed 's/^[^/]*\///')"
       - name: Output get last commit
         run: echo "$(git log -n 1 --skip 1 --pretty=format:"%H")"
 
       - id: getbranch
-        run: echo "::set-output name=branch::$(git log -1 --pretty=%B | awk -F '\\\\n' '{print $1}' |  awk -F '/' '{print $2}' | grep -v -e '^$')"
+        run: echo "::set-output name=branch::$(git log -1 --pretty=%B | grep 'Merge pull request' | sed 's/^[^/]*\///')"
       - id: getcommit
         run: echo "::set-output name=commit::$(git log -n 1 --skip 1 --pretty=format:"%H")"
