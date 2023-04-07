@@ -31,4 +31,4 @@ jobs:
         #  2. Convert any uppercase letters to lowercase (tr '[:upper:]' '[:lower:]')
         #  3. Strip any leading and trailing spaces (xargs echo -n)
         #  4. Convert spaces to dashes (tr ' ' '-')
-        run: echo "::set-output name=norm_name::$(echo "$RAW_NAME" | tr -cs '[:alnum:]' ' ' | tr '[:upper:]' '[:lower:]' | xargs echo -n | tr ' ' '-')"
+        run: echo "norm_name=$(echo "$RAW_NAME" | tr -cs '[:alnum:]' ' ' | tr '[:upper:]' '[:lower:]' | xargs echo -n | tr ' ' '-')" >> $GITHUB_OUTPUT

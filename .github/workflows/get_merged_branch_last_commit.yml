@@ -26,6 +26,6 @@ jobs:
         run: echo "$(git log -n 1 --skip 1 --pretty=format:"%H")"
 
       - id: getbranch
-        run: echo "::set-output name=branch::$(git log -1 --pretty=%B | grep 'Merge pull request' | sed 's/^[^/]*\///')"
+        run: echo "branch=$(git log -1 --pretty=%B | grep 'Merge pull request' | sed 's/^[^/]*\///')" >> $GITHUB_OUTPUT
       - id: getcommit
-        run: echo "::set-output name=commit::$(git log -n 1 --skip 1 --pretty=format:"%H")"
+        run: echo "commit=$(git log -n 1 --skip 1 --pretty=format:"%H")" >> $GITHUB_OUTPUT
