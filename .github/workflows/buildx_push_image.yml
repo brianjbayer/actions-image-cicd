@@ -6,8 +6,12 @@ on:
       image:
         required: true
         type: string
+      platforms:
+        required: true
+        type: string
       buildopts:
         type: string
+
     secrets:
       registry_u:
         required: true
@@ -43,7 +47,8 @@ jobs:
         env:
           DOCKER_BUILDKIT: 1
           BUILDOPTS: ${{ inputs.buildopts }}
-        run: docker pull ${IMAGE} || (docker buildx build --no-cache ${BUILDOPTS} --push --platform linux/amd64,linux/arm64 --tag ${IMAGE} .)
+          PLATFORMS: ${{ inputs.platforms }}
+        run: docker pull ${IMAGE} || (docker buildx build --no-cache ${BUILDOPTS} --push --platform ${PLATFORMS} --tag ${IMAGE} .)
 
       - name: Logout of DockerHub Registry
         run: docker logout
