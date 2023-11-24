@@ -53,9 +53,11 @@ jobs:
     with:
       raw_name: ${{ github.head_ref }}
 
-  check-build_push_image:
+  # TODO: Testing buildx
+  check-buildx_push_image:
     needs: [pr-norm-branch]
-    uses: brianjbayer/actions-image-cicd/.github/workflows/build_push_image.yml@main
+    # TODO: Restore to main branch
+    uses: brianjbayer/actions-image-cicd/.github/workflows/buildx_push_image.yml@add-multi-arch-buildx
     with:
       image: ${{ github.repository }}_${{ needs.pr-norm-branch.outputs.name }}_test:${{ github.event.pull_request.head.sha }}
     secrets:
@@ -63,7 +65,7 @@ jobs:
       registry_p: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
 
   check-pull_push_image:
-    needs: [check-build_push_image, pr-norm-branch]
+    needs: [check-buildx_push_image, pr-norm-branch]
     uses: brianjbayer/actions-image-cicd/.github/workflows/pull_push_image.yml@main
     with:
       pull_as: ${{ github.repository }}_${{ needs.pr-norm-branch.outputs.name }}_test:${{ github.event.pull_request.head.sha }}
