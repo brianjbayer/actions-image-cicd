@@ -1,0 +1,54 @@
+name: Idempotent Buildx Multi Arch Push Image
+
+on:
+  workflow_call:
+    inputs:
+      image:
+        required: true
+        type: string
+      platforms:
+        required: true
+        type: string
+      buildopts:
+        type: string
+
+    secrets:
+      registry_u:
+        required: true
+      registry_p:
+        required: true
+
+jobs:
+
+  pull-or-buildx-and-push-image:
+    name: Pull or Build Multi Arch and Push Image
+    runs-on: ubuntu-latest
+    env:
+      IMAGE: ${{ inputs.image }}
+
+    steps:
+      - uses: actions/checkout@v1
+
+      - name: Image name
+        run: echo "Image name [${IMAGE}]"
+
+      # https://github.com/docker/setup-qemu-action
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v1
+      # https://github.com/docker/setup-buildx-action
+      - name: Set up Docker Buildx
+        id: buildx
+        uses: docker/setup-buildx-action@v1
+
+      - name: Login to DockerHub Registry
+        run: echo ${{ secrets.registry_p }} | docker login -u ${{ secrets.registry_u }} --password-stdin
+
+      - name: If not pull image, buildx and push image
+        env:
+          DOCKER_BUILDKIT: 1
+          BUILDOPTS: ${{ inputs.buildopts }}
+          PLATFORMS: ${{ inputs.platforms }}
+        run: docker pull ${IMAGE} || (docker buildx build --no-cache ${BUILDOPTS} --push --platform ${PLATFORMS} --tag ${IMAGE} .)
+
+      - name: Logout of DockerHub Registry
+        run: docker logout

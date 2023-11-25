@@ -1,0 +1,42 @@
+name: Copy Image To Latest
+
+on:
+  workflow_call:
+    inputs:
+      image_name:
+        required: true
+        type: string
+      image_tag:
+        required: true
+        type: string
+    secrets:
+      registry_u:
+        required: true
+      registry_p:
+        required: true
+
+jobs:
+
+  copy-image-to-latest:
+    name: Copy Image:Tag to Image:latest
+    runs-on: ubuntu-latest
+    env:
+      IMAGE_NAME: ${{ inputs.image_name }}
+      IMAGE_TAG: ${{ inputs.image_tag }}
+
+    steps:
+      - name: Install regctl registry tool
+        run: |
+          curl -fsSL "https://github.com/regclient/regclient/releases/latest/download/regctl-linux-amd64" >regctl
+
+      - name: Make regctl executable
+        run: chmod 755 regctl
+
+      - name: Login to DockerHub Registry
+        run: echo ${{ secrets.registry_p }} | docker login -u ${{ secrets.registry_u }} --password-stdin
+
+      - name: Copy image:tag to latest tag
+        run: ./regctl image copy ${IMAGE_NAME}:${IMAGE_TAG} ${IMAGE_NAME}:latest
+
+      - name: Logout of DockerHub Registry
+        run: docker logout

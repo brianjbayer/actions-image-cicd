@@ -36,28 +36,58 @@ jobs:
 # Ensure last branch commit-tagged image exists
 # This should demonstrate impotence in the output
 # if the commit was created as part of PR job
-  ensure-last-branch-commit-image:
+  ensure-last-branch-build-push-commit-image:
     needs: [branch-and-last-commit, push-norm-branch]
     uses: brianjbayer/actions-image-cicd/.github/workflows/build_push_image.yml@main
     with:
-      image: ${{ github.repository }}_${{ needs.push-norm-branch.outputs.name }}:${{ needs.branch-and-last-commit.outputs.commit }}
+      image: ${{ github.repository }}_${{ needs.push-norm-branch.outputs.name }}_push:${{ needs.branch-and-last-commit.outputs.commit }}
     secrets:
       registry_u: ${{ secrets.DOCKER_HUB_USERNAME }}
       registry_p: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
 
-  promote-branch-last-commit-to-prod:
-    needs: [branch-and-last-commit, ensure-last-branch-commit-image, push-norm-branch]
+  ensure-last-branch-buildx-push-commit-image:
+    needs: [branch-and-last-commit, push-norm-branch]
+    uses: brianjbayer/actions-image-cicd/.github/workflows/buildx_push_image.yml@add-multi-arch-buildx
+    with:
+      image: ${{ github.repository }}_${{ needs.push-norm-branch.outputs.name }}:${{ needs.branch-and-last-commit.outputs.commit }}
+      platforms: "linux/amd64,linux/arm64"
+    secrets:
+      registry_u: ${{ secrets.DOCKER_HUB_USERNAME }}
+      registry_p: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
+
+  pull-push-image-branch-last-commit-to-prod:
+    needs: [branch-and-last-commit, ensure-last-branch-build-push-commit-image, push-norm-branch]
     uses: brianjbayer/actions-image-cicd/.github/workflows/pull_push_image.yml@main
     with:
-      pull_as: ${{ github.repository }}_${{ needs.push-norm-branch.outputs.name }}:${{ needs.branch-and-last-commit.outputs.commit }}
-      push_as: ${{ github.repository }}:${{ needs.branch-and-last-commit.outputs.commit }}
+      pull_as: ${{ github.repository }}_${{ needs.push-norm-branch.outputs.name }}_push:${{ needs.branch-and-last-commit.outputs.commit }}
+      push_as: ${{ github.repository }}_push:${{ needs.branch-and-last-commit.outputs.commit }}
     secrets:
       registry_u: ${{ secrets.DOCKER_HUB_USERNAME }}
       registry_p: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
 
-  promote-branch-last-commit-to-prod-latest:
-    needs: [branch-and-last-commit, promote-branch-last-commit-to-prod]
+  copy-image-branch-last-commit-to-prod:
+    needs: [branch-and-last-commit, ensure-last-branch-buildx-push-commit-image, push-norm-branch]
+    uses: brianjbayer/actions-image-cicd/.github/workflows/copy_image.yml@add-multi-arch-buildx
+    with:
+      source_image: ${{ github.repository }}_${{ needs.push-norm-branch.outputs.name }}:${{ needs.branch-and-last-commit.outputs.commit }}
+      target_image: ${{ github.repository }}:${{ needs.branch-and-last-commit.outputs.commit }}
+    secrets:
+      registry_u: ${{ secrets.DOCKER_HUB_USERNAME }}
+      registry_p: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
+
+  pull-push-image-branch-last-commit-to-prod-latest:
+    needs: [branch-and-last-commit, pull-push-image-branch-last-commit-to-prod]
     uses: brianjbayer/actions-image-cicd/.github/workflows/pull_push_latest_image.yml@main
+    with:
+      image_name: ${{ github.repository }}_push
+      image_tag: ${{ needs.branch-and-last-commit.outputs.commit }}
+    secrets:
+      registry_u: ${{ secrets.DOCKER_HUB_USERNAME }}
+      registry_p: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
+
+  copy-image-branch-last-commit-to-prod-latest:
+    needs: [branch-and-last-commit, copy-image-branch-last-commit-to-prod]
+    uses: brianjbayer/actions-image-cicd/.github/workflows/copy_image_to_latest_image.yml@main
     with:
       image_name: ${{ github.repository }}
       image_tag: ${{ needs.branch-and-last-commit.outputs.commit }}
