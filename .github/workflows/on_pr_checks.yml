@@ -63,7 +63,6 @@ jobs:
       registry_p: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
 
   # Multi Architecture Builds (assumed default)
-  # TODO: TESTING
   check-buildx_push_image:
     needs: [pr-norm-branch]
     # TODO: Restore to main branch
