@@ -1,12 +1,12 @@
-name: Idempotent Copy (Promote) Image
+name: Copy Image To Latest
 
 on:
   workflow_call:
     inputs:
-      source_image:
+      image_name:
         required: true
         type: string
-      target_image:
+      image_tag:
         required: true
         type: string
     secrets:
@@ -17,12 +17,12 @@ on:
 
 jobs:
 
-  pull-or-copy-images:
-    name: Pull or Copy Image
+  copy-image-to-latest:
+    name: Copy Image:Tag to Image:latest
     runs-on: ubuntu-latest
     env:
-      SOURCE_IMAGE: ${{ inputs.source_image }}
-      TARGET_IMAGE: ${{ inputs.target_image }}
+      IMAGE_NAME: ${{ inputs.image_name }}
+      IMAGE_TAG: ${{ inputs.image_tag }}
 
     steps:
       - name: Install regctl registry tool
@@ -35,8 +35,8 @@ jobs:
       - name: Login to DockerHub Registry
         run: echo ${{ secrets.registry_p }} | docker login -u ${{ secrets.registry_u }} --password-stdin
 
-      - name: If the target image does not exist, copy source image to target image
-        run: docker pull ${TARGET_IMAGE} || ./regctl image copy ${SOURCE_IMAGE} ${TARGET_IMAGE}
+      - name: Copy image:tag to latest tag
+        run: ./regctl image copy ${IMAGE_NAME}:${IMAGE_TAG} ${IMAGE_NAME}:latest
 
       - name: Logout of DockerHub Registry
         run: docker logout

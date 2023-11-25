@@ -57,7 +57,7 @@ jobs:
     needs: [pr-norm-branch]
     uses: brianjbayer/actions-image-cicd/.github/workflows/build_push_image.yml@main
     with:
-      image: ${{ github.repository }}_${{ needs.pr-norm-branch.outputs.name }}_test_ci_arch:${{ github.event.pull_request.head.sha }}
+      image: ${{ github.repository }}_${{ needs.pr-norm-branch.outputs.name }}_test_push:${{ github.event.pull_request.head.sha }}
     secrets:
       registry_u: ${{ secrets.DOCKER_HUB_USERNAME }}
       registry_p: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
@@ -79,8 +79,8 @@ jobs:
     needs: [check-build_push_image, pr-norm-branch]
     uses: brianjbayer/actions-image-cicd/.github/workflows/pull_push_image.yml@main
     with:
-      pull_as: ${{ github.repository }}_${{ needs.pr-norm-branch.outputs.name }}_test_ci_arch:${{ github.event.pull_request.head.sha }}
-      push_as: ${{ github.repository }}_${{ needs.pr-norm-branch.outputs.name }}_ci_arch:${{ github.event.pull_request.head.sha }}
+      pull_as: ${{ github.repository }}_${{ needs.pr-norm-branch.outputs.name }}_test_push:${{ github.event.pull_request.head.sha }}
+      push_as: ${{ github.repository }}_${{ needs.pr-norm-branch.outputs.name }}_push:${{ github.event.pull_request.head.sha }}
     secrets:
       registry_u: ${{ secrets.DOCKER_HUB_USERNAME }}
       registry_p: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
@@ -98,6 +98,16 @@ jobs:
   check-pull_push_latest_image:
     needs: [check-pull_push_image, pr-norm-branch]
     uses: brianjbayer/actions-image-cicd/.github/workflows/pull_push_latest_image.yml@main
+    with:
+      image_name: ${{ github.repository }}_${{ needs.pr-norm-branch.outputs.name }}_push
+      image_tag: ${{ github.event.pull_request.head.sha }}
+    secrets:
+      registry_u: ${{ secrets.DOCKER_HUB_USERNAME }}
+      registry_p: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
+
+  check-copy_image_to_latest:
+    needs: [check-copy_image, pr-norm-branch]
+    uses: brianjbayer/actions-image-cicd/.github/workflows/copy_image_yo_latest.yml@add-multi-arch-buildx
     with:
       image_name: ${{ github.repository }}_${{ needs.pr-norm-branch.outputs.name }}
       image_tag: ${{ github.event.pull_request.head.sha }}
