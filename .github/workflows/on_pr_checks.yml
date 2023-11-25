@@ -76,11 +76,21 @@ jobs:
       registry_p: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
 
   check-pull_push_image:
-    needs: [check-buildx_push_image, pr-norm-branch]
+    needs: [check-build_push_image, pr-norm-branch]
     uses: brianjbayer/actions-image-cicd/.github/workflows/pull_push_image.yml@main
     with:
-      pull_as: ${{ github.repository }}_${{ needs.pr-norm-branch.outputs.name }}_test:${{ github.event.pull_request.head.sha }}
-      push_as: ${{ github.repository }}_${{ needs.pr-norm-branch.outputs.name }}:${{ github.event.pull_request.head.sha }}
+      pull_as: ${{ github.repository }}_${{ needs.pr-norm-branch.outputs.name }}_test_ci_arch:${{ github.event.pull_request.head.sha }}
+      push_as: ${{ github.repository }}_${{ needs.pr-norm-branch.outputs.name }}_ci_arch:${{ github.event.pull_request.head.sha }}
+    secrets:
+      registry_u: ${{ secrets.DOCKER_HUB_USERNAME }}
+      registry_p: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
+
+  check-copy_image:
+    needs: [check-buildx_push_image, pr-norm-branch]
+    uses: brianjbayer/actions-image-cicd/.github/workflows/copy_image.yml@add-multi-arch-buildx
+    with:
+      source_image: ${{ github.repository }}_${{ needs.pr-norm-branch.outputs.name }}_test:${{ github.event.pull_request.head.sha }}
+      target_image: ${{ github.repository }}_${{ needs.pr-norm-branch.outputs.name }}:${{ github.event.pull_request.head.sha }}
     secrets:
       registry_u: ${{ secrets.DOCKER_HUB_USERNAME }}
       registry_p: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
