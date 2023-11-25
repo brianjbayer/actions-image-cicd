@@ -107,7 +107,7 @@ jobs:
 
   check-copy_image_to_latest:
     needs: [check-copy_image, pr-norm-branch]
-    uses: brianjbayer/actions-image-cicd/.github/workflows/copy_image_yo_latest.yml@add-multi-arch-buildx
+    uses: brianjbayer/actions-image-cicd/.github/workflows/copy_image_to_latest.yml@add-multi-arch-buildx
     with:
       image_name: ${{ github.repository }}_${{ needs.pr-norm-branch.outputs.name }}
       image_tag: ${{ github.event.pull_request.head.sha }}
