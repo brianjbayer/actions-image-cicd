@@ -47,7 +47,7 @@ jobs:
 
   ensure-last-branch-buildx-push-commit-image:
     needs: [branch-and-last-commit, push-norm-branch]
-    uses: brianjbayer/actions-image-cicd/.github/workflows/buildx_push_image.yml@add-multi-arch-buildx
+    uses: brianjbayer/actions-image-cicd/.github/workflows/buildx_push_image.yml@main
     with:
       image: ${{ github.repository }}_${{ needs.push-norm-branch.outputs.name }}:${{ needs.branch-and-last-commit.outputs.commit }}
       platforms: "linux/amd64,linux/arm64"
@@ -67,7 +67,7 @@ jobs:
 
   copy-image-branch-last-commit-to-prod:
     needs: [branch-and-last-commit, ensure-last-branch-buildx-push-commit-image, push-norm-branch]
-    uses: brianjbayer/actions-image-cicd/.github/workflows/copy_image.yml@add-multi-arch-buildx
+    uses: brianjbayer/actions-image-cicd/.github/workflows/copy_image.yml@main
     with:
       source_image: ${{ github.repository }}_${{ needs.push-norm-branch.outputs.name }}:${{ needs.branch-and-last-commit.outputs.commit }}
       target_image: ${{ github.repository }}:${{ needs.branch-and-last-commit.outputs.commit }}
@@ -87,7 +87,7 @@ jobs:
 
   copy-image-branch-last-commit-to-prod-latest:
     needs: [branch-and-last-commit, copy-image-branch-last-commit-to-prod]
-    uses: brianjbayer/actions-image-cicd/.github/workflows/copy_image_to_latest.yml@add-multi-arch-buildx
+    uses: brianjbayer/actions-image-cicd/.github/workflows/copy_image_to_latest.yml@main
     with:
       image_name: ${{ github.repository }}
       image_tag: ${{ needs.branch-and-last-commit.outputs.commit }}
