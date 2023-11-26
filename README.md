@@ -7,6 +7,9 @@ These reusable actions are primarily designed to be used
 in another repository's Continuous Integration/Continuous Deployment
 (CI/CD) where the image is the deployable artifact.
 
+These reusable actions support both single architecture (platform)
+and multi-architecture images (although the specific actions used differ),
+
 See [GitHub's Documentation on Reusable Actions](https://docs.github.com/en/actions/using-workflows/reusing-workflows)
 and the gist [The Basics of GitHub Actions Reusable Workflows](https://gist.github.com/brianjbayer/a1e73789fa26deda500c829d1b4d0d88).
 
@@ -61,7 +64,11 @@ With this intended CI/CD, there are two basic GitHub Actions workflows...
        ```
        .github/workflows/build_push_image.yml@main
        ```
-    2. Pull and perform vetting (e.g. linting, security scans, 
+       or build and push **multi-architecture image**:
+       ```
+       .github/workflows/buildx_push_image.yml@main
+       ```
+    2. Pull and perform vetting (e.g. linting, security scans,
        unit tests, end-to-end tests etc) on pushed unvetted potential
        release candidate image
     3. If all vetting checks passed, promote the unvetted potential
@@ -69,6 +76,10 @@ With this intended CI/CD, there are two basic GitHub Actions workflows...
        using:
        ```
        .github/workflows/pull_push_image.yml@main
+       ```
+       or promote by copying **multi-architecture image**:
+       ```
+       .github/workflows/copy_image.yml@main
        ```
 
   * **On Push to main (merge)...**
@@ -81,11 +92,27 @@ With this intended CI/CD, there are two basic GitHub Actions workflows...
        ```
        .github/workflows/pull_push_image.yml@main
        ```
+       or promote by copying **multi-architecture image**:
+       ```
+       .github/workflows/copy_image.yml@main
+       ```
     3. Optionally tag the just promoted production image as latest
        using:
        ```
        .github/workflows/pull_push_latest_image.yml@main
        ```
+       or tag by copying **multi-architecture image** to latest:
+       ```
+       .github/workflows/copy_image_to_latest.yml@main
+       ```
+
+## Dependencies
+The multi-architecture `copy_image*` workflows use and depend upon the awesome
+[`regclient`](https://github.com/regclient/regclient)
+command line tool which allows copying of all image architectures
+at the container registry (i.e. DockerHub) level instead of pulling,
+tagging, and pushing.
+
 
 For more on image-based CI/CD, see the gist
 [An Image-Based Continuous Integration / Continuous Deployment Model](https://gist.github.com/brianjbayer/e5e9f07e0923d8d097d7b03803ea837b).
