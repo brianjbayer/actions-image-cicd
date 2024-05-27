@@ -4,27 +4,32 @@ on:
   workflow_call:
 
     inputs:
+      runner:
+        description: "The type of runner for this workflow (Default: ubuntu-latest)"
+        required: false
+        type: string
+        default: ubuntu-latest
       raw_name:
+        description: The name to be normalized
         required: true
         type: string
     outputs:
       name:
+        description: "The normalized name"
         value: ${{ jobs.normalize-for-image-name.outputs.normed_name }}
 
 jobs:
 
   normalize-for-image-name:
-    name: Normalize to ensure valid image name
-    runs-on: ubuntu-latest
+    name: Normalize for Image Name
+    runs-on: ${{ inputs.runner }}
     outputs:
       normed_name: ${{ steps.normalize.outputs.norm_name }}
     env:
       RAW_NAME: ${{ inputs.raw_name }}
-
     steps:
       - name: Normalize input
         run: echo "Inputted RAW_NAME=[${RAW_NAME}]"
-
       - id: normalize
         # Normalization...
         #  1. Convert non-alphanumeric to space and remove any duplicate spaces (tr -cs)

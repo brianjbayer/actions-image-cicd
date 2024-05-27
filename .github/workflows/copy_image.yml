@@ -2,41 +2,49 @@ name: Idempotent Copy (Promote) Image
 
 on:
   workflow_call:
+
+    secrets:
+      registry_u:
+        description: The username for the docker login
+        required: true
+      registry_p:
+        description: The password (PAT) for the docker login
+        required: true
+
     inputs:
       source_image:
+        description: The image name to promote
         required: true
         type: string
       target_image:
-        required: true
+        description: The name of the promoted image (destination)
         type: string
-    secrets:
-      registry_u:
-        required: true
-      registry_p:
-        required: true
+      runner:
+        description: "The type of runner for this workflow (Default: ubuntu-latest)"
+        required: false
+        type: string
+        default: ubuntu-latest
 
 jobs:
-
-  pull-or-copy-images:
-    name: Pull or Copy Image
-    runs-on: ubuntu-latest
+  copy-images:
+    name: Copy Image
+    runs-on: ${{ inputs.runner }}
     env:
       SOURCE_IMAGE: ${{ inputs.source_image }}
       TARGET_IMAGE: ${{ inputs.target_image }}
 
     steps:
-      - name: Install regctl registry tool
-        run: |
-          curl -fsSL "https://github.com/regclient/regclient/releases/latest/download/regctl-linux-amd64" >regctl
-
-      - name: Make regctl executable
-        run: chmod 755 regctl
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
       - name: Login to DockerHub Registry
         run: echo ${{ secrets.registry_p }} | docker login -u ${{ secrets.registry_u }} --password-stdin
 
-      - name: If the target image does not exist, copy source image to target image
-        run: docker pull ${TARGET_IMAGE} || ./regctl image copy ${SOURCE_IMAGE} ${TARGET_IMAGE}
+      - name: Copy image (buildx imagetools create)
+        run: |
+          docker buildx imagetools create \
+            --tag ${{ inputs.target_image }} \
+            ${{ inputs.source_image }}
 
       - name: Logout of DockerHub Registry
         run: docker logout

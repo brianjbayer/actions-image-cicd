@@ -1,0 +1,64 @@
+name: Vet Code Standards
+
+on:
+  workflow_call:
+
+    inputs:
+      runner:
+        description: "The type of runner for this workflow (Default: ubuntu-latest)"
+        required: false
+        type: string
+        default: ubuntu-latest
+      lint_command:
+        description: The command to vet linting
+        required: false
+        type: string
+      dependency_security_command:
+        description: The command to vet dependency security
+        required: false
+        type: string
+      static_security_command:
+        description: The command to vet static security analysis
+        required: false
+        type: string
+      tests_command:
+        description: The command to run the tests
+        required: false
+        type: string
+
+jobs:
+  vet-code-standards:
+    name: Vet Linting
+    if: ${{ inputs.lint_command != '' }}
+    runs-on: ${{ inputs.runner }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: "Lint [ ${{ inputs.lint_command }} ]"
+        run: ${{ inputs.lint_command }}
+
+  vet-dependency-security:
+    name:  Vet Dependency Security
+    if: ${{ inputs.dependency_security_command != '' }}
+    runs-on: ${{ inputs.runner }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: "Dependency Scan [ ${{ inputs.dependency_security_command }} ]"
+        run: ${{ inputs.dependency_security_command }}
+
+  vet-static-security:
+    name:  Vet Static Security
+    if: ${{ inputs.static_security_command != '' }}
+    runs-on: ${{ inputs.runner }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: "Vet Static Security [ ${{ inputs.static_security_command }} ]"
+        run: ${{ inputs.static_security_command }}
+
+  run-tests:
+    name:  Run Tests
+    if: ${{ inputs.tests_command != '' }}
+    runs-on: ${{ inputs.runner }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: "Vet Tests [ ${{ inputs.tests_command }} ]"
+        run: ${{ inputs.tests_command }}

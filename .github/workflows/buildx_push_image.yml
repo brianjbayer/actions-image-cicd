@@ -1,46 +1,56 @@
-name: Idempotent Buildx Multi Arch Push Image
+name: Idempotent Buildx and Push Multiplatform Image
 
 on:
   workflow_call:
-    inputs:
-      image:
-        required: true
-        type: string
-      platforms:
-        required: true
-        type: string
-      buildopts:
-        type: string
 
     secrets:
       registry_u:
+        description: The username for the docker login
         required: true
       registry_p:
+        description: The password (PAT) for the docker login
         required: true
+
+    inputs:
+      image:
+        description: The name of the image to build and push
+        required: true
+        type: string
+      platforms:
+        description: The image platforms to build
+        required: true
+        type: string
+      buildopts:
+        description: Optional docker buildx options
+        type: string
+      runner:
+        description: "The type of runner for this workflow (Default: ubuntu-latest)"
+        required: false
+        type: string
+        default: ubuntu-latest
 
 jobs:
 
   pull-or-buildx-and-push-image:
-    name: Pull or Build Multi Arch and Push Image
-    runs-on: ubuntu-latest
+    name: Build and Push (Once) Multiplatform Image
+    runs-on: ${{ inputs.runner }}
     env:
       IMAGE: ${{ inputs.image }}
 
     steps:
-      - uses: actions/checkout@v1
+      - uses: actions/checkout@v4
 
       - name: Image name
         run: echo "Image name [${IMAGE}]"
 
-      # https://github.com/docker/setup-qemu-action
       - name: Set up QEMU
-        uses: docker/setup-qemu-action@v1
-      # https://github.com/docker/setup-buildx-action
-      - name: Set up Docker Buildx
-        id: buildx
-        uses: docker/setup-buildx-action@v1
+        uses: docker/setup-qemu-action@v3
 
-      - name: Login to DockerHub Registry
+      - name: Set up Docker buildx
+        id: buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to DockerHub registry
         run: echo ${{ secrets.registry_p }} | docker login -u ${{ secrets.registry_u }} --password-stdin
 
       - name: If not pull image, buildx and push image
@@ -50,5 +60,8 @@ jobs:
           PLATFORMS: ${{ inputs.platforms }}
         run: docker pull ${IMAGE} || (docker buildx build --no-cache ${BUILDOPTS} --push --platform ${PLATFORMS} --tag ${IMAGE} .)
 
-      - name: Logout of DockerHub Registry
+      - name: Logout of DockerHub registry
         run: docker logout
+
+      - name: Annotate image name
+        run: echo "::notice::Built and pushed image [${IMAGE}] for platforms [${{ inputs.platforms }}]"

@@ -2,14 +2,22 @@ name: Display Basic Git and GitHub (Actions) Info
 
 on:
   workflow_call:
+    inputs:
+      runner:
+        description: "The type of runner for this workflow (Default: ubuntu-latest)"
+        required: false
+        type: string
+        default: ubuntu-latest
 
 jobs:
   git-github-info:
     name: Git and GitHub Information
-    runs-on: ubuntu-latest
+    runs-on: ${{ inputs.runner }}
 
     steps:
-      - uses: actions/checkout@v1
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Git log
         run: git log
