@@ -72,10 +72,10 @@ jobs:
 
     steps:
       - id: dev
-        run: echo "dev_name=${{ inputs.image_base_name }}${ADD_BRANCH}_dev:${{inputs.tag}}" >> $GITHUB_OUTPUT
+        run: echo "dev_name=${{ inputs.image_base_name }}${ADD_BRANCH}-dev:${{inputs.tag}}" >> $GITHUB_OUTPUT
 
       - id: unvetted
-        run: echo "unvetted_name=${{ inputs.image_base_name }}${ADD_BRANCH}_unvetted:${{inputs.tag}}" >> $GITHUB_OUTPUT
+        run: echo "unvetted_name=${{ inputs.image_base_name }}${ADD_BRANCH}-unvetted:${{inputs.tag}}" >> $GITHUB_OUTPUT
 
       - id: vetted
         run: echo "vetted_name=${{ inputs.image_base_name }}${ADD_BRANCH}:${{inputs.tag}}" >> $GITHUB_OUTPUT

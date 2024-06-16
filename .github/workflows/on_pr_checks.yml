@@ -65,10 +65,10 @@ jobs:
           echo "Unvetted Image Name : ${UNVETTED_IMAGE}"
           echo "Vetted Image Name   : ${VETTED_IMAGE}"
       - name: Verify Dev Image Name
-        run: test "$DEV_IMAGE" = "${{ github.repository }}_dev:${{ github.event.pull_request.head.sha }}"
+        run: test "$DEV_IMAGE" = "${{ github.repository }}-dev:${{ github.event.pull_request.head.sha }}"
       - name: Verify Unvetted Image Name
         if: ${{ success() || failure() }}
-        run: test "$UNVETTED_IMAGE" = "${{ github.repository }}_unvetted:${{ github.event.pull_request.head.sha }}"
+        run: test "$UNVETTED_IMAGE" = "${{ github.repository }}-unvetted:${{ github.event.pull_request.head.sha }}"
       - name: Verify Vetted Image Name
         if: ${{ success() || failure() }}
         run: test "$VETTED_IMAGE" = "${{ github.repository }}:${{ github.event.pull_request.head.sha }}"
@@ -94,10 +94,10 @@ jobs:
           echo "Unvetted Image Name : ${UNVETTED_IMAGE}"
           echo "Vetted Image Name   : ${VETTED_IMAGE}"
       - name: Verify Dev Image Name
-        run: test "$DEV_IMAGE" = "${{ github.repository }}_${{ github.head_ref }}_dev:${{ github.event.pull_request.head.sha }}"
+        run: test "$DEV_IMAGE" = "${{ github.repository }}_${{ github.head_ref }}-dev:${{ github.event.pull_request.head.sha }}"
       - name: Verify Unvetted Image Name
         if: ${{ success() || failure() }}
-        run: test "$UNVETTED_IMAGE" = "${{ github.repository }}_${{ github.head_ref }}_unvetted:${{ github.event.pull_request.head.sha }}"
+        run: test "$UNVETTED_IMAGE" = "${{ github.repository }}_${{ github.head_ref }}-unvetted:${{ github.event.pull_request.head.sha }}"
       - name: Verify Vetted Image Name
         if: ${{ success() || failure() }}
         run: test "$VETTED_IMAGE" = "${{ github.repository }}_${{ github.head_ref }}:${{ github.event.pull_request.head.sha }}"
@@ -125,11 +125,10 @@ jobs:
           echo "Unvetted Image Name : ${UNVETTED_IMAGE}"
           echo "Vetted Image Name   : ${VETTED_IMAGE}"
       - name: Verify Dev Image Name
-      # brianjbayer/actions-image-cicd_my-branch_dev:7e149a2ab17591102f05f7815a1d94ea8cc2e6d6
-        run: test "$DEV_IMAGE" = "${{ github.repository }}_${NORM_BRANCH}_dev:${{ github.event.pull_request.head.sha }}"
+        run: test "$DEV_IMAGE" = "${{ github.repository }}_${NORM_BRANCH}-dev:${{ github.event.pull_request.head.sha }}"
       - name: Verify Unvetted Image Name
         if: ${{ success() || failure() }}
-        run: test "$UNVETTED_IMAGE" = "${{ github.repository }}_${NORM_BRANCH}_unvetted:${{ github.event.pull_request.head.sha }}"
+        run: test "$UNVETTED_IMAGE" = "${{ github.repository }}_${NORM_BRANCH}-unvetted:${{ github.event.pull_request.head.sha }}"
       - name: Verify Vetted Image Name
         if: ${{ success() || failure() }}
         run: test "$VETTED_IMAGE" = "${{ github.repository }}_${NORM_BRANCH}:${{ github.event.pull_request.head.sha }}"
@@ -142,7 +141,6 @@ jobs:
     needs: pr-image-names-with-branch
     uses: ./.github/workflows/buildx_push_image.yml
     with:
-      # image: ${{ github.repository }}_${{ needs.pr-norm-branch.outputs.name }}_test:${{ github.event.pull_request.head.sha }}
       image: ${{ needs.pr-image-names-with-branch.outputs.unvetted_image }}
       platforms: "linux/amd64,linux/arm64"
     secrets:
