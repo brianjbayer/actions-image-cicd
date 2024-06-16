@@ -2,30 +2,44 @@ name: Merged Branch and Last Commit SHA of Branch
 
 on:
   workflow_call:
+    inputs:
+      runner:
+        description: "The type of runner for this workflow (Default: ubuntu-latest)"
+        required: false
+        type: string
+        default: ubuntu-latest
 
     outputs:
       branch:
+        description: The name of the merged branch (from merge comment)
         value: ${{ jobs.merged-branch-commit.outputs.branch }}
       commit:
+        description: The last commit on the branch (commit before merge commit)
         value: ${{ jobs.merged-branch-commit.outputs.commit }}
 
 jobs:
   merged-branch-commit:
-    name: Generate merged branch and branch last commit
-    runs-on: ubuntu-latest
+    name: Determine Merged Branch and Last Commit on Branch
+    runs-on: ${{ inputs.runner }}
     outputs:
       branch: ${{ steps.getbranch.outputs.branch }}
       commit: ${{ steps.getcommit.outputs.commit }}
 
     steps:
-      - uses: actions/checkout@v1
-
-      - name: Output get branch
-        run: echo "$(git log -1 --pretty=%B | grep 'Merge pull request' | sed 's/^[^/]*\///')"
-      - name: Output get last commit
-        run: echo "$(git log -n 1 --skip 1 --pretty=format:"%H")"
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - id: getbranch
         run: echo "branch=$(git log -1 --pretty=%B | grep 'Merge pull request' | sed 's/^[^/]*\///')" >> $GITHUB_OUTPUT
       - id: getcommit
         run: echo "commit=$(git log -n 1 --skip 1 --pretty=format:"%H")" >> $GITHUB_OUTPUT
+
+      - name: Debug
+        run: |
+          echo "$(git log -1 --pretty=%B | grep 'Merge pull request' | sed 's/^[^/]*\///')"
+          echo "branch [${{ steps.getbranch.outputs.branch }}]"
+          echo "$(git log -n 1 --skip 1 --pretty=format:"%H")"
+          echo "commit [${{ steps.getcommit.outputs.commit }}]"
+          echo "git log..."
+          git log

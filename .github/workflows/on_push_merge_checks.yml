@@ -1,4 +1,4 @@
-name: On Push (Merge) Workflow Checks
+name: Merge
 on:
   push:
     branches:
@@ -6,91 +6,54 @@ on:
 
 jobs:
 
-# The get_merged_branch_last_commit workflow can really only be tested
-# on a merge commit
+  # --- Image Names ---
+
   branch-and-last-commit:
-    uses: brianjbayer/actions-image-cicd/.github/workflows/get_merged_branch_last_commit.yml@main
+    name: Merged Branch and Last Commit
+    uses: ./.github/workflows/get_merged_branch_last_commit.yml
 
-  push-norm-branch:
-    needs: [branch-and-last-commit]
-    uses: brianjbayer/actions-image-cicd/.github/workflows/normalize_for_image_name.yml@main
+  merged-image-names:
+    name: Merged (Branch) Image Names
+    needs:
+      - branch-and-last-commit
+    uses: ./.github/workflows/image_names.yml
     with:
-      raw_name: ${{ needs.branch-and-last-commit.outputs.branch }}
+      add_branch_name: true
+      branch_name: ${{ needs.branch-and-last-commit.outputs.branch }}
+      tag: ${{ needs.branch-and-last-commit.outputs.commit }}
 
-  branch-and-last-commit-merged-info:
-    needs: [branch-and-last-commit, push-norm-branch]
-    runs-on: ubuntu-latest
-    env:
-      BRANCH_LAST_COMMIT: ${{ needs.branch-and-last-commit.outputs.commit }}
-      BRANCH: ${{ needs.branch-and-last-commit.outputs.branch }}
-      NORM_BRANCH: ${{ needs.push-norm-branch.outputs.name }}
-
-    steps:
-      - name: Output last commit of merged branch env var
-        run: echo "BRANCH_LAST_COMMIT=[${BRANCH_LAST_COMMIT}]"
-      - name: Output merged branch env var
-        run: echo "BRANCH=[${BRANCH}]"
-      - name: Output normalized merged branch env var
-        run: echo "NORM_BRANCH=[${NORM_BRANCH}]"
-
-# Ensure last branch commit-tagged image exists
-# This should demonstrate impotence in the output
-# if the commit was created as part of PR job
-  ensure-last-branch-build-push-commit-image:
-    needs: [branch-and-last-commit, push-norm-branch]
-    uses: brianjbayer/actions-image-cicd/.github/workflows/build_push_image.yml@main
+  production-image-names:
+    name: Production Image Names
+    needs:
+      - branch-and-last-commit
+    uses: ./.github/workflows/image_names.yml
     with:
-      image: ${{ github.repository }}_${{ needs.push-norm-branch.outputs.name }}_push:${{ needs.branch-and-last-commit.outputs.commit }}
+      tag: ${{ needs.branch-and-last-commit.outputs.commit }}
+
+  # --- Promote Production Images ---
+
+  # Promote Deployment Image
+  promote-merged-deploy-image:
+    name: Promote Merged Deployment Image to Production
+    needs:
+      - merged-image-names
+      - production-image-names
+    uses: ./.github/workflows/copy_image.yml
+    with:
+      source_image: ${{ needs.merged-image-names.outputs.vetted_image }}
+      target_image: ${{ needs.production-image-names.outputs.vetted_image }}
     secrets:
       registry_u: ${{ secrets.DOCKER_HUB_USERNAME }}
       registry_p: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
 
-  ensure-last-branch-buildx-push-commit-image:
-    needs: [branch-and-last-commit, push-norm-branch]
-    uses: brianjbayer/actions-image-cicd/.github/workflows/buildx_push_image.yml@main
+  promote-merged-deploy-image-to-latest:
+    name: Promote Latest Deployment Image
+    needs:
+      - production-image-names
+      - promote-merged-deploy-image
+    uses: ./.github/workflows/copy_image_to_latest.yml
     with:
-      image: ${{ github.repository }}_${{ needs.push-norm-branch.outputs.name }}:${{ needs.branch-and-last-commit.outputs.commit }}
-      platforms: "linux/amd64,linux/arm64"
-    secrets:
-      registry_u: ${{ secrets.DOCKER_HUB_USERNAME }}
-      registry_p: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
-
-  pull-push-image-branch-last-commit-to-prod:
-    needs: [branch-and-last-commit, ensure-last-branch-build-push-commit-image, push-norm-branch]
-    uses: brianjbayer/actions-image-cicd/.github/workflows/pull_push_image.yml@main
-    with:
-      pull_as: ${{ github.repository }}_${{ needs.push-norm-branch.outputs.name }}_push:${{ needs.branch-and-last-commit.outputs.commit }}
-      push_as: ${{ github.repository }}_push:${{ needs.branch-and-last-commit.outputs.commit }}
-    secrets:
-      registry_u: ${{ secrets.DOCKER_HUB_USERNAME }}
-      registry_p: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
-
-  copy-image-branch-last-commit-to-prod:
-    needs: [branch-and-last-commit, ensure-last-branch-buildx-push-commit-image, push-norm-branch]
-    uses: brianjbayer/actions-image-cicd/.github/workflows/copy_image.yml@main
-    with:
-      source_image: ${{ github.repository }}_${{ needs.push-norm-branch.outputs.name }}:${{ needs.branch-and-last-commit.outputs.commit }}
-      target_image: ${{ github.repository }}:${{ needs.branch-and-last-commit.outputs.commit }}
-    secrets:
-      registry_u: ${{ secrets.DOCKER_HUB_USERNAME }}
-      registry_p: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
-
-  pull-push-image-branch-last-commit-to-prod-latest:
-    needs: [branch-and-last-commit, pull-push-image-branch-last-commit-to-prod]
-    uses: brianjbayer/actions-image-cicd/.github/workflows/pull_push_latest_image.yml@main
-    with:
-      image_name: ${{ github.repository }}_push
-      image_tag: ${{ needs.branch-and-last-commit.outputs.commit }}
-    secrets:
-      registry_u: ${{ secrets.DOCKER_HUB_USERNAME }}
-      registry_p: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
-
-  copy-image-branch-last-commit-to-prod-latest:
-    needs: [branch-and-last-commit, copy-image-branch-last-commit-to-prod]
-    uses: brianjbayer/actions-image-cicd/.github/workflows/copy_image_to_latest.yml@main
-    with:
-      image_name: ${{ github.repository }}
-      image_tag: ${{ needs.branch-and-last-commit.outputs.commit }}
+      image: ${{ needs.production-image-names.outputs.vetted_image }}
     secrets:
       registry_u: ${{ secrets.DOCKER_HUB_USERNAME }}
       registry_p: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}

@@ -7,8 +7,7 @@ These reusable actions are primarily designed to be used
 in another repository's Continuous Integration/Continuous Deployment
 (CI/CD) where the image is the deployable artifact.
 
-These reusable actions support both single architecture (platform)
-and multi-architecture images (although the specific actions used differ),
+These reusable actions support multi-platform images.
 
 See [GitHub's Documentation on Reusable Actions](https://docs.github.com/en/actions/using-workflows/reusing-workflows)
 and the gist [The Basics of GitHub Actions Reusable Workflows](https://gist.github.com/brianjbayer/a1e73789fa26deda500c829d1b4d0d88).
@@ -46,14 +45,14 @@ does the official image promotion to the production image and could
 also trigger the (re)deployment of this production-named image to
 production.
 
-The image names in this intended CI are based upon the PR Branch and
-tagged with the commit.  While this information is easily available
-in GitHub PR Actions, it is not so available in the Push (i.e. merge)
-Actions.
+The image names in this intended CI are tagged with the commit
+and can be based upon the PR branch.  While this branch and
+commit information is easily available in GitHub PR Actions,
+it is not so available in the Push (i.e. merge) Actions.
 
 > :eyes: To ensure that the branch-based image names are valid and
 > meet Docker's image name restrictions, use the
-> `normalize_for_image_name.yml` reusable workflow.  If the image
+> `image_names.yml` reusable workflow.  If the image
 > names are not valid, the images will not build and the CI/CD will
 > fail.
 
@@ -62,11 +61,7 @@ With this intended CI/CD, there are two basic GitHub Actions workflows...
     1. Build and push unvetted potential release candidate image from
        commit using:
        ```
-       .github/workflows/build_push_image.yml@main
-       ```
-       or build and push **multi-architecture image**:
-       ```
-       .github/workflows/buildx_push_image.yml@main
+       .github/workflows/buildx_push_image.yml@v0.2.0
        ```
     2. Pull and perform vetting (e.g. linting, security scans,
        unit tests, end-to-end tests etc) on pushed unvetted potential
@@ -75,44 +70,24 @@ With this intended CI/CD, there are two basic GitHub Actions workflows...
        release candidate image to an actual release candidate image
        using:
        ```
-       .github/workflows/pull_push_image.yml@main
-       ```
-       or promote by copying **multi-architecture image**:
-       ```
-       .github/workflows/copy_image.yml@main
+       .github/workflows/copy_image.yml@v0.2.0
        ```
 
   * **On Push to main (merge)...**
     1. Get the merged branch and the last commit of it to determine
       the release candidate image name using:
        ```
-       .github/workflows/get_merged_branch_last_commit.yml@main
+       .github/workflows/get_merged_branch_last_commit.yml@v0.2.0
        ```
     2. Promote the release candidate image to production using:
        ```
-       .github/workflows/pull_push_image.yml@main
-       ```
-       or promote by copying **multi-architecture image**:
-       ```
-       .github/workflows/copy_image.yml@main
+       .github/workflows/copy_image.yml@v0.2.0
        ```
     3. Optionally tag the just promoted production image as latest
        using:
        ```
-       .github/workflows/pull_push_latest_image.yml@main
+       .github/workflows/copy_image_to_latest.yml@v0.2.0
        ```
-       or tag by copying **multi-architecture image** to latest:
-       ```
-       .github/workflows/copy_image_to_latest.yml@main
-       ```
-
-## Dependencies
-The multi-architecture `copy_image*` workflows use and depend upon the awesome
-[`regclient`](https://github.com/regclient/regclient)
-command line tool which allows copying of all image architectures
-at the container registry (i.e. DockerHub) level instead of pulling,
-tagging, and pushing.
-
 
 For more on image-based CI/CD, see the gist
 [An Image-Based Continuous Integration / Continuous Deployment Model](https://gist.github.com/brianjbayer/e5e9f07e0923d8d097d7b03803ea837b).

@@ -1,0 +1,87 @@
+name: Development and Deploy Image Names
+
+on:
+  workflow_call:
+
+    inputs:
+      runner:
+        description: "The type of runner for this workflow (Default: ubuntu-latest)"
+        required: false
+        type: string
+        default: ubuntu-latest
+      image_base_name:
+        description: "The name of the image including its registry and repository (Default: github.repository)"
+        required: false
+        type: string
+        default: ${{ github.repository }}
+      add_branch_name:
+        description: Append branch name to image names
+        required: false
+        type: boolean
+        default: false
+      branch_name:
+        description: Non-normalized branch name to use if add_branch_name is true
+        required: false
+        type: string
+        default: ${{ github.head_ref }}
+      tag:
+        description: "Tag for image names (Default: github.event.pull_request.head.sha)"
+        required: false
+        type: string
+        default: ${{ github.event.pull_request.head.sha }}
+    outputs:
+      dev_image:
+        description: The name of the development environment image
+        value: ${{ jobs.generate-pr-image-names.outputs.dev_name }}
+      unvetted_image:
+        description: The name of the unvetted deployment image
+        value: ${{ jobs.generate-pr-image-names.outputs.unvetted_name }}
+      vetted_image:
+        description: The name of the Vetted deployment image
+        value: ${{ jobs.generate-pr-image-names.outputs.vetted_name }}
+
+jobs:
+  pr-norm-branch:
+    name: Normalize Branch for Image Name
+    uses: ./.github/workflows/normalize_for_image_name.yml
+    with:
+      raw_name: ${{ inputs.branch_name }}
+      runner: ${{ inputs.runner }}
+
+  add-branch:
+    name: If Add Branch to Image Name
+    runs-on: ${{ inputs.runner }}
+    needs: pr-norm-branch
+    outputs:
+      added: ${{ steps.add-branch.outputs.add_branch }}
+    steps:
+      - id: add-branch
+        run: echo "add_branch=$(${{ inputs.add_branch_name }} && echo _${{ needs.pr-norm-branch.outputs.name }})" >> $GITHUB_OUTPUT
+
+  generate-pr-image-names:
+    name: Generate Image Names
+    runs-on: ${{ inputs.runner }}
+    needs:
+      - add-branch
+    env:
+      ADD_BRANCH: ${{ needs.add-branch.outputs.added }}
+    outputs:
+      dev_name: ${{ steps.dev.outputs.dev_name }}
+      unvetted_name: ${{ steps.unvetted.outputs.unvetted_name }}
+      vetted_name: ${{ steps.vetted.outputs.vetted_name }}
+
+    steps:
+      - id: dev
+        run: echo "dev_name=${{ inputs.image_base_name }}${ADD_BRANCH}_dev:${{inputs.tag}}" >> $GITHUB_OUTPUT
+
+      - id: unvetted
+        run: echo "unvetted_name=${{ inputs.image_base_name }}${ADD_BRANCH}_unvetted:${{inputs.tag}}" >> $GITHUB_OUTPUT
+
+      - id: vetted
+        run: echo "vetted_name=${{ inputs.image_base_name }}${ADD_BRANCH}:${{inputs.tag}}" >> $GITHUB_OUTPUT
+
+      - name: Debug
+        run: |
+          echo "dev_name      [${{ steps.dev.outputs.dev_name }}]"
+          echo "unvetted_name [${{ steps.unvetted.outputs.unvetted_name }}]"
+          echo "vetted_name   [${{ steps.vetted.outputs.vetted_name }}]"
