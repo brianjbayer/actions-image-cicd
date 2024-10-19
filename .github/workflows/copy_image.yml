@@ -48,3 +48,6 @@ jobs:
 
       - name: Logout of DockerHub Registry
         run: docker logout
+
+      - name: Annotate copied image
+        run: echo "::notice::Copied image [${{ inputs.source_image }}] -> [${{ inputs.target_image }}]"
