@@ -50,7 +50,7 @@ jobs:
     with:
       runner: ${{ inputs.runner }}
       source_image: ${{ inputs.image }}
-      target_image: ${{ needs.strip-tag-from-image.outputs.image_name_only }}
+      target_image: "${{ needs.strip-tag-from-image.outputs.image_name_only }}:latest"
     secrets:
       registry_u: ${{ secrets.registry_u }}
       registry_p: ${{ secrets.registry_p }}
