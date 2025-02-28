@@ -1,0 +1,98 @@
+name: Idempotent Buildx amd64/arm4 Multiplatform Image
+
+on:
+  workflow_call:
+
+    secrets:
+      registry_u:
+        description: The username for the docker login
+        required: true
+      registry_p:
+        description: The password (PAT) for the docker login
+        required: true
+
+    inputs:
+      image:
+        description: The name of the image to build and push
+        required: true
+        type: string
+      buildopts:
+        description: Optional docker buildx options
+        type: string
+      runner_general:
+        description: "The type of runner for the general jobs in workflow (Default: ubuntu-24.04-arm)"
+        required: false
+        type: string
+        default: ubuntu-24.04-arm
+      runner_amd64:
+        description: "The type of linux/amd64 runner for this workflow (Default: ubuntu-latest)"
+        required: false
+        type: string
+        default: ubuntu-latest
+      runner_arm64:
+        description: "The type of linux/arm64 runner for this workflow (Default: ubuntu-24.04-arm)"
+        required: false
+        type: string
+        default: ubuntu-24.04-arm
+
+jobs:
+
+  buildx-and-push-image:
+    name: Build and Push Platform Image
+    runs-on: ${{ matrix.platform.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        platform:
+          - name: amd64
+            runner: ${{ inputs.runner_amd64 }}
+          - name: arm64
+            runner: ${{ inputs.runner_arm64 }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Image name
+        run: echo "Image name [${{ inputs.image }}-${{ matrix.platform.name }}]"
+
+      - name: Set up Docker buildx
+        id: buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to DockerHub registry
+        run: echo ${{ secrets.registry_p }} | docker login -u ${{ secrets.registry_u }} --password-stdin
+
+      - name: Buildx and push image
+        env:
+          DOCKER_BUILDKIT: 1
+          BUILDOPTS: ${{ inputs.buildopts }}
+        run: |
+          docker pull ${{ inputs.image }}-${{ matrix.platform.name }} \
+          || docker buildx build \
+            --no-cache ${BUILDOPTS} \
+            --push --platform linux/${{ matrix.platform.name }} \
+            --tag ${{ inputs.image }}-${{ matrix.platform.name }} \
+            .
+
+      - name: Logout of DockerHub registry
+        run: docker logout
+
+  combine-images:
+    name: Create Multiplatform Image
+    runs-on: ${{ inputs.runner_general }}
+    needs: buildx-and-push-image
+    env:
+      IMAGE: ${{ inputs.image }}
+
+    steps:
+      - name: Login to DockerHub registry
+        run: echo ${{ secrets.registry_p }} | docker login -u ${{ secrets.registry_u }} --password-stdin
+
+      - name: Create and push multiplatform image
+        run: |
+          docker pull ${IMAGE} || docker buildx imagetools create -t ${IMAGE} ${IMAGE}-amd64 ${IMAGE}-arm64
+
+      - name: Logout of DockerHub registry
+        run: docker logout
+
+      - name: Annotate image name
+        run: echo "::notice::Built and pushed multiplatform image [${IMAGE}]"
