@@ -136,13 +136,12 @@ jobs:
 
   # --- Build/Push Multi-platform Image ---
 
-  buildx_push_image:
-    name: Build (Multi-platform) Image
+  buildx_push_amd_arm_image:
+    name: Build Multiplatform(amd/arm) Image
     needs: pr-image-names-with-branch
-    uses: ./.github/workflows/buildx_push_image.yml
+    uses: ./.github/workflows/buildx_amd_arm_image.yml
     with:
       image: ${{ needs.pr-image-names-with-branch.outputs.unvetted_image }}
-      platforms: "linux/amd64,linux/arm64"
     secrets:
       registry_u: ${{ secrets.DOCKER_HUB_USERNAME }}
       registry_p: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
@@ -153,7 +152,7 @@ jobs:
     name: Promote (Copy) Multi-platform) Image
     needs:
       - pr-image-names-with-branch
-      - buildx_push_image
+      - buildx_push_amd_arm_image
     uses: ./.github/workflows/copy_image.yml
     with:
       source_image: ${{ needs.pr-image-names-with-branch.outputs.unvetted_image }}
