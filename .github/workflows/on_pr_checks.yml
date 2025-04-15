@@ -10,6 +10,25 @@ jobs:
   check-git_github_info:
     uses: ./.github/workflows/git_github_info.yml
 
+  detect-changed-files:
+    name: Detect Changed Files Using Git
+    uses: ./.github/workflows/git_detect_changed_files.yml
+    with:
+      file_pattern: git_detect_changed_files.yml
+
+  check-detect-changed-files:
+    name: Check Detect Changed Files
+    runs-on: ubuntu-latest
+    needs: detect-changed-files
+    steps:
+      - name: Check any changed
+        run: |
+          if [ "${{ needs.detect-changed-files.outputs.any_changed }}" = "true" ]; then
+            echo "Changed files detected "
+          else
+            echo "No Changed files detected"
+          fi
+
   # --- Image Name Normalizer ---
 
   normalize-valid-image-name:
@@ -132,7 +151,6 @@ jobs:
       - name: Verify Vetted Image Name
         if: ${{ success() || failure() }}
         run: test "$VETTED_IMAGE" = "${{ github.repository }}_${NORM_BRANCH}:${{ github.event.pull_request.head.sha }}"
-
 
   # --- Build/Push Multi-platform Image ---
 
