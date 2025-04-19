@@ -1,0 +1,94 @@
+name: Detect Changed Files Using Git
+
+on:
+  workflow_call:
+    inputs:
+      runner:
+        description: "The type of runner for this workflow (Default: ubuntu-latest)"
+        required: false
+        type: string
+        default: ubuntu-latest
+      file_pattern:
+        description: "The file pattern (regex) to check for changes"
+        required: true
+        type: string
+      base_commit:
+        description: "The base commit against which to check for changes"
+        required: false
+        type: string
+      target_commit:
+        description: "The target (e.g. latest)commit to compare against the base commit"
+        required: false
+        type: string
+
+    outputs:
+      any_changed:
+        description: Returns 'true' if any files matching the pattern have changed; else 'false'
+        value: ${{ jobs.git-detect-changed-files.outputs.any_changed }}
+
+jobs:
+  git-detect-changed-files:
+    name: Detect Changed Files Using Git
+    runs-on: ${{ inputs.runner }}
+    outputs:
+      any_changed: ${{ steps.detect-changed-files.outputs.any_changed }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Git log
+        run: git log
+
+      - name: Determine target commit
+        id: get-target-commit
+        run: |
+          if [ -n "${{ inputs.target_commit }}" ]; then
+            echo "Target commit from input [${{ inputs.target_commit }}]"
+            echo "target_commit=${{ inputs.target_commit }}" >> $GITHUB_OUTPUT
+          elif [ -n "${{ github.event.pull_request.head.sha }}" ]; then
+            echo "Target (latest) commit from PR context [${{ github.event.pull_request.head.sha }}]"
+            echo "target_commit=${{ github.event.pull_request.head.sha }}" >> $GITHUB_OUTPUT
+          else
+            current_head=$(git log -1 --pretty=format:"%H")
+            echo "Target (latest) commit from HEAD [${current_head}]"
+            echo "target_commit=${current_head}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Determine base commit
+        id: get-base-commit
+        run: |
+          if [ -n "${{ inputs.base_commit }}" ]; then
+            echo "Base commit from input [${{ inputs.base_commit }}]"
+            echo "base_commit=${{ inputs.base_commit }}" >> $GITHUB_OUTPUT
+          elif [ -n "${{ github.event.pull_request.base.sha }}" ]; then
+            echo "Base commit from PR context [${{ github.event.pull_request.base.sha }}]"
+            echo "base_commit=${{ github.event.pull_request.base.sha }}" >> $GITHUB_OUTPUT
+          else
+            previous_head=$(git rev-parse HEAD^)
+            echo "Base commit from HEAD [${previous_head}]"
+            echo "base_commit=${previous_head}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Detect changed files
+        id: detect-changed-files
+        run: |
+          echo "Detecting changed files between [${{ steps.get-base-commit.outputs.base_commit }}] and [${{ steps.get-target-commit.outputs.target_commit }}]"
+          # Allow for no matches (command fail)
+          changed_files=$(git diff --name-only ${{ steps.get-base-commit.outputs.base_commit }}...${{ steps.get-target-commit.outputs.target_commit }} | grep -E "${{ inputs.file_pattern }}" || :)
+          if [ -n "$changed_files" ]; then
+            echo "any_changed=true" >> $GITHUB_OUTPUT
+            echo "Changed files:"
+            echo "$changed_files"
+          else
+            echo "any_changed=false" >> $GITHUB_OUTPUT
+            echo "No changed files detected for the specified pattern"
+          fi
+
+      - name: Outputs
+        run: |
+          echo "any_changed [${{ steps.detect-changed-files.outputs.any_changed }}]"
+          echo "target_commit [${{ steps.get-target-commit.outputs.target_commit }}]"
+          echo "base_commit [${{ steps.get-base-commit.outputs.base_commit }}]"
