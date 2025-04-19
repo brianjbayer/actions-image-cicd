@@ -7,8 +7,13 @@ on:
 
 jobs:
 
+    # --- Git and GitHub Info ---
+
   check-git_github_info:
+    name: Check Git and GitHub Info
     uses: ./.github/workflows/git_github_info.yml
+
+  # --- Detect Changed Files ---
 
   detect-changed-files:
     name: Detect Changed Files Using Git
@@ -32,11 +37,13 @@ jobs:
   # --- Image Name Normalizer ---
 
   normalize-valid-image-name:
+    name: Normalize Valid Image Name
     uses: ./.github/workflows/normalize_for_image_name.yml
     with:
       raw_name: valid-lowercase-dashes-numbers-22
 
   check-valid-normalize_for_image_name:
+    name: Verify Normalize Valid Image Name
     needs: [normalize-valid-image-name]
     runs-on: ubuntu-latest
     env:
@@ -48,11 +55,13 @@ jobs:
         run: test "$NORM_NAME" = 'valid-lowercase-dashes-numbers-22'
 
   normalize-invalid-image-name:
+    name: Normalize Invalid Image Name
     uses: ./.github/workflows/normalize_for_image_name.yml
     with:
       raw_name: "  Dependabot/bundler//nokogiri-1.13.4  "
 
   check-invalid-normalize_for_image_name:
+    name: Verify Normalize Invalid Image Name
     needs: [normalize-invalid-image-name]
     runs-on: ubuntu-latest
     env:
@@ -180,7 +189,7 @@ jobs:
       registry_p: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
 
   copyx_image_to_latest:
-    name: Promote (Copy) Latest Multi-platform) Image
+    name: Promote (Copy) Latest Multi-platform Image
     needs:
       - pr-image-names-with-branch
       - copyx_image
