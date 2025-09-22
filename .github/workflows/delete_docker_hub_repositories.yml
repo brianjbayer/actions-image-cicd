@@ -1,0 +1,82 @@
+name: Delete Image Repositories
+
+on:
+  workflow_call:
+    inputs:
+      runner:
+        description: "The type of runner for this workflow (Default: ubuntu-latest)"
+        required: false
+        type: string
+        default: ubuntu-latest
+      repositories:
+        description: "Docker Hub repositories to delete (JSON array)"
+        required: true
+        type: string
+      summary:
+        description: "Add a summary report to the workflow run (Default: true)"
+        required: false
+        type: boolean
+        default: true
+      ref:
+        description: "The git reference for the action"
+        required: false
+        type: string
+
+    secrets:
+      registry_u:
+        description: The username for the docker login
+        required: true
+      registry_p:
+        description: The password (PAT) for the docker login
+        required: true
+
+jobs:
+  delete-image-repository:
+    name: Delete ${{ matrix.repository }}
+    runs-on: ${{ inputs.runner }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        repository: ${{ fromJSON(inputs.repositories) }}
+
+    steps:
+      - name: Checkout action repository
+        uses: actions/checkout@v5
+        with:
+          repository: brianjbayer/actions-image-cicd
+          ref: ${{ inputs.ref }}
+          path: action-repo
+
+      # THe Docker Hub API needs just the repository name, not the namespace/org
+      - name: Extract Hub repository
+        id: extract-repo-name
+        run: |
+          repo="${{ matrix.repository }}"
+          hub_repo="${repo##*/}"
+          echo "hub_repo=$hub_repo" >> "$GITHUB_OUTPUT"
+          echo "hub_repo: [$hub_repo]"
+
+      - name: Delete Hub repository ${{ steps.extract-repo-name.outputs.hub_repo }}
+        id: delete-docker-repos
+        uses: ./action-repo/.github/workflows/actions/delete-docker-hub-repository
+        with:
+          docker-hub-repository: ${{ steps.extract-repo-name.outputs.hub_repo }}
+          docker-hub-username: ${{ secrets.registry_u }}
+          docker-hub-password: ${{ secrets.registry_p }}
+
+      - name: Summary report
+        if: ${{ inputs.summary == true && (success() || failure()) }}
+        run: |
+          if [[ ${{ steps.delete-docker-repos.outcome }} == 'success' ]] ; then
+            message=":white_check_mark: Deleted Docker Hub repository \`${{ matrix.repository }}\`"
+          else
+            message=":x: Failed to delete Docker Hub repository \`${{ matrix.repository }}\`"
+          fi
+          cat <<EOF >> $GITHUB_STEP_SUMMARY
+          ### Docker Hub Repository Deletion
+          Repository: \`${{ matrix.repository }}\`
+
+          ${message}
+
+          EOF
