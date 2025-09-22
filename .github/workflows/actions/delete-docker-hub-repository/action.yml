@@ -1,0 +1,21 @@
+name: Delete Docker Hub Repository
+description: "Deletes the specified Docker Hub Repository"
+
+inputs:
+  docker-hub-repository:
+    description: "Docker Hub Username"
+    required: true
+  docker-hub-username:
+    description: "Docker Hub Username"
+    required: true
+  docker-hub-password:
+    description: "Docker Hub Password"
+    required: true
+
+runs:
+  using: docker
+  image: Dockerfile
+  env:
+    DOCKER_HUB_REPOSITORY: ${{ inputs.docker-hub-repository }}
+    DOCKER_HUB_USERNAME: ${{ inputs.docker-hub-username }}
+    DOCKER_HUB_PASSWORD: ${{ inputs.docker-hub-password }}
