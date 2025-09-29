@@ -12,6 +12,75 @@ These reusable actions support multi-platform images.
 See [GitHub's Documentation on Reusable Actions](https://docs.github.com/en/actions/using-workflows/reusing-workflows)
 and the gist [The Basics of GitHub Actions Reusable Workflows](https://gist.github.com/brianjbayer/a1e73789fa26deda500c829d1b4d0d88).
 
+## Reusable Workflows and Actions
+
+### Reusable Workflows
+
+#### buildx_push_image.yml
+Idempotent multi-platform image build and push workflow.
+
+**Inputs:**
+- `image` - Name of the image to build and push (required)
+- `platforms` - Image platforms to build (required)
+- `buildopts` - Optional docker buildx options
+- `runner` - Type of runner (default: ubuntu-latest)
+
+**Secrets:**
+- `registry_u` - Docker registry username
+- `registry_p` - Docker registry password/PAT
+
+#### copy_image.yml
+Copies/promotes an image from one tag to another.
+
+**Inputs:**
+- `from_image` - Source image to copy from (required)
+- `to_image` - Target image to copy to (required)
+- `runner` - Runner type (default: ubuntu-latest)
+
+**Secrets:**
+- `registry_u` - Docker registry username
+- `registry_p` - Docker registry password/PAT
+
+#### delete_docker_hub_repositories.yml
+Matrix-based deletion of Docker Hub repositories.
+
+**Inputs:**
+- `repositories` - JSON array of repository names to delete (required)
+- `runner` - Runner type (default: ubuntu-latest)
+- `summary` - Add summary report (default: true)
+- `ref` - Git reference for action checkout (optional)
+
+**Secrets:**
+- `registry_u` - Docker registry username
+- `registry_p` - Docker registry password/PAT
+
+#### get_merged_branch_last_commit.yml
+Gets merged branch and last commit information.
+
+**Outputs:**
+- `merged_branch` - The name of the merged branch
+- `last_commit` - The SHA of the last commit
+
+#### image_names.yml
+Image name normalization and validation.
+
+**Inputs:**
+- `name_base` - Base name for the image (required)
+- `branch` - Branch name for tag (required)
+
+**Outputs:**
+- `normalized_name` - Docker-compatible normalized image name
+
+### Actions (Dockerfile-based)
+
+#### delete-docker-hub-repository
+Container action to delete a Docker Hub repository.
+
+**Inputs:**
+- `docker-hub-repository` - Repository name to delete (required)
+- `docker-hub-username` - Docker Hub username (required)
+- `docker-hub-password` - Docker Hub password/token (required)
+
 ## Intent of the Workflows
 These workflows were designed to be simple cohesive building blocks called
 within the using repository's own customized workflows where the high-level
