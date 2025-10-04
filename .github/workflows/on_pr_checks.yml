@@ -72,7 +72,43 @@ jobs:
       - name: Verify normalized name
         run: test "$NORM_NAME" = 'dependabot-bundler-nokogiri-1-13-4'
 
-  # -- PR Names ---
+  # --- Latest Tag ---
+
+  default-latest-tag:
+    name: Latest Tag (Default)
+    uses: ./.github/workflows/latest_tag.yml
+
+  check-default-latest-tag:
+    name: Verify Default Latest Tag
+    needs: default-latest-tag
+    runs-on: ubuntu-latest
+    env:
+      LATEST_TAG: ${{ needs.default-latest-tag.outputs.tag }}
+    steps:
+      - name: Output latest tag
+        run: echo "LATEST_TAG=[${LATEST_TAG}]"
+      - name: Verify latest tag
+        run: test "$LATEST_TAG" = 'latest'
+
+  specified-latest-tag:
+    name: Latest Tag
+    uses: ./.github/workflows/latest_tag.yml
+    with:
+      latest_tag: "3.1459"
+
+  check-specified-latest-tag:
+    name: Verify Specified Latest Tag
+    needs: specified-latest-tag
+    runs-on: ubuntu-latest
+    env:
+      LATEST_TAG: ${{ needs.specified-latest-tag.outputs.tag }}
+    steps:
+      - name: Output latest tag
+        run: echo "LATEST_TAG=[${LATEST_TAG}]"
+      - name: Verify latest tag
+        run: test "$LATEST_TAG" = '3.1459'
+
+  # --- PR Names ---
 
   pr-image-names-no-branch:
     name: Generate PR Image Names

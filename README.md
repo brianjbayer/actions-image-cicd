@@ -71,6 +71,15 @@ Image name normalization and validation.
 **Outputs:**
 - `normalized_name` - Docker-compatible normalized image name
 
+#### latest_tag.yml
+Latest tag for reuse in calling Reusable Workflows (`with:`)
+
+**Inputs:**
+- `latest_tag` - Tag for latest image names (Default: latest)
+
+**Outputs:**
+- `tag` - The latest tag
+
 ### Actions (Dockerfile-based)
 
 #### delete-docker-hub-repository
