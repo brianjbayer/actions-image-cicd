@@ -49,6 +49,10 @@ jobs:
     with:
       tag: ${{ needs.branch-and-last-commit.outputs.commit }}
 
+  latest-tag:
+    name: Latest Tag
+    uses: ./.github/workflows/latest_tag.yml
+
   # --- Promote Production Images ---
 
   # Promote Deployment Image
@@ -68,11 +72,27 @@ jobs:
   promote-merged-deploy-image-to-latest:
     name: Promote Latest Deployment Image
     needs:
-      - production-image-names
       - promote-merged-deploy-image
-    uses: ./.github/workflows/copy_image_to_latest.yml
+      - production-image-names
+      - latest-tag
+    uses: ./.github/workflows/copy_image.yml
     with:
-      image: ${{ needs.production-image-names.outputs.vetted_image }}
+      source_image: ${{ needs.production-image-names.outputs.vetted_image }}
+      target_image: "${{ needs.production-image-names.outputs.vetted_repository }}:${{ needs.latest-tag.outputs.tag }}"
+    secrets:
+      registry_u: ${{ secrets.DOCKER_HUB_USERNAME }}
+      registry_p: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
+
+  # --- Delete PR Branch Image Repositories ---
+
+  delete-pr-branch-image-repositories:
+    name: Delete PR Branch Image Repositories
+    needs:
+    - merged-image-names
+    - promote-merged-deploy-image-to-latest
+    uses: ./.github/workflows/delete_docker_hub_repositories.yml
+    with:
+      repositories: '[ "${{ needs.merged-image-names.outputs.vetted_repository }}" ]'
     secrets:
       registry_u: ${{ secrets.DOCKER_HUB_USERNAME }}
       registry_p: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}

@@ -1,0 +1,35 @@
+name: Latest Tag for Image Names
+
+on:
+  workflow_call:
+
+    inputs:
+      runner:
+        description: "The type of runner for this workflow (Default: ubuntu-latest)"
+        required: false
+        type: string
+        default: ubuntu-latest
+      latest_tag:
+        description: "Tag for latest image names (Default: latest)"
+        required: false
+        type: string
+        default: latest
+
+    outputs:
+      tag:
+        description: The latest tag
+        value: ${{ jobs.latest-tag.outputs.latest_tag }}
+
+jobs:
+  latest-tag:
+    name: Set The Latest Tag ${{ inputs.latest_tag }}
+    runs-on: ${{ inputs.runner }}
+    outputs:
+      latest_tag: ${{ steps.set-tag.outputs.latest_tag }}
+    steps:
+      - name: Set tag
+        id: set-tag
+        run: echo "latest_tag=${{ inputs.latest_tag }}" >> $GITHUB_OUTPUT
+
+      - name: Show tag
+        run: echo "latest_tag=${{ steps.set-tag.outputs.latest_tag }}"

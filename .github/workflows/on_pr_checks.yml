@@ -72,7 +72,43 @@ jobs:
       - name: Verify normalized name
         run: test "$NORM_NAME" = 'dependabot-bundler-nokogiri-1-13-4'
 
-  # -- PR Names ---
+  # --- Latest Tag ---
+
+  default-latest-tag:
+    name: Latest Tag (Default)
+    uses: ./.github/workflows/latest_tag.yml
+
+  check-default-latest-tag:
+    name: Verify Default Latest Tag
+    needs: default-latest-tag
+    runs-on: ubuntu-latest
+    env:
+      LATEST_TAG: ${{ needs.default-latest-tag.outputs.tag }}
+    steps:
+      - name: Output latest tag
+        run: echo "LATEST_TAG=[${LATEST_TAG}]"
+      - name: Verify latest tag
+        run: test "$LATEST_TAG" = 'latest'
+
+  specified-latest-tag:
+    name: Latest Tag
+    uses: ./.github/workflows/latest_tag.yml
+    with:
+      latest_tag: "3.1459"
+
+  check-specified-latest-tag:
+    name: Verify Specified Latest Tag
+    needs: specified-latest-tag
+    runs-on: ubuntu-latest
+    env:
+      LATEST_TAG: ${{ needs.specified-latest-tag.outputs.tag }}
+    steps:
+      - name: Output latest tag
+        run: echo "LATEST_TAG=[${LATEST_TAG}]"
+      - name: Verify latest tag
+        run: test "$LATEST_TAG" = '3.1459'
+
+  # --- PR Names ---
 
   pr-image-names-no-branch:
     name: Generate PR Image Names
@@ -84,8 +120,11 @@ jobs:
     needs: pr-image-names-no-branch
     env:
       DEV_IMAGE: ${{ needs.pr-image-names-no-branch.outputs.dev_image }}
+      DEV_REPO: ${{ needs.pr-image-names-no-branch.outputs.dev_repository }}
       UNVETTED_IMAGE: ${{ needs.pr-image-names-no-branch.outputs.unvetted_image }}
+      UNVETTED_REPO: ${{ needs.pr-image-names-no-branch.outputs.unvetted_repository }}
       VETTED_IMAGE: ${{ needs.pr-image-names-no-branch.outputs.vetted_image }}
+      VETTED_REPO: ${{ needs.pr-image-names-no-branch.outputs.vetted_repository }}
     steps:
       - name: Image Names
         run: |
@@ -100,6 +139,19 @@ jobs:
       - name: Verify Vetted Image Name
         if: ${{ success() || failure() }}
         run: test "$VETTED_IMAGE" = "${{ github.repository }}:${{ github.event.pull_request.head.sha }}"
+      - name: Repository Names
+        run: |
+          echo "Dev Repository Name      : ${DEV_REPO}"
+          echo "Unvetted Repository Name : ${UNVETTED_REPO}"
+          echo "Vetted Repository Name   : ${VETTED_REPO}"
+      - name: Verify Dev Repository Name
+        run: test "$DEV_REPO" = "${{ github.repository }}-dev"
+      - name: Verify Unvetted Repository Name
+        if: ${{ success() || failure() }}
+        run: test "$UNVETTED_REPO" = "${{ github.repository }}-unvetted"
+      - name: Verify Vetted Repository Name
+        if: ${{ success() || failure() }}
+        run: test "$VETTED_REPO" = "${{ github.repository }}"
 
   pr-image-names-with-branch:
     name: Generate PR (Branch) Image Names
@@ -113,8 +165,11 @@ jobs:
     needs: pr-image-names-with-branch
     env:
       DEV_IMAGE: ${{ needs.pr-image-names-with-branch.outputs.dev_image }}
+      DEV_REPO: ${{ needs.pr-image-names-with-branch.outputs.dev_repository }}
       UNVETTED_IMAGE: ${{ needs.pr-image-names-with-branch.outputs.unvetted_image }}
+      UNVETTED_REPO: ${{ needs.pr-image-names-with-branch.outputs.unvetted_repository }}
       VETTED_IMAGE: ${{ needs.pr-image-names-with-branch.outputs.vetted_image }}
+      VETTED_REPO: ${{ needs.pr-image-names-with-branch.outputs.vetted_repository }}
     steps:
       - name: Image Names
         run: |
@@ -129,6 +184,19 @@ jobs:
       - name: Verify Vetted Image Name
         if: ${{ success() || failure() }}
         run: test "$VETTED_IMAGE" = "${{ github.repository }}_${{ github.head_ref }}:${{ github.event.pull_request.head.sha }}"
+      - name: Repository Names
+        run: |
+          echo "Dev Repository Name      : ${DEV_REPO}"
+          echo "Unvetted Repository Name : ${UNVETTED_REPO}"
+          echo "Vetted Repository Name   : ${VETTED_REPO}"
+      - name: Verify Dev Repository Name
+        run: test "$DEV_REPO" = "${{ github.repository }}_${{ github.head_ref }}-dev"
+      - name: Verify Unvetted Repository Name
+        if: ${{ success() || failure() }}
+        run: test "$UNVETTED_REPO" = "${{ github.repository }}_${{ github.head_ref }}-unvetted"
+      - name: Verify Vetted Repository Name
+        if: ${{ success() || failure() }}
+        run: test "$VETTED_REPO" = "${{ github.repository }}_${{ github.head_ref }}"
 
   pr-image-names-override-branch:
     name: Override PR Branch Image Names
@@ -143,8 +211,11 @@ jobs:
     needs: pr-image-names-override-branch
     env:
       DEV_IMAGE: ${{ needs.pr-image-names-override-branch.outputs.dev_image }}
+      DEV_REPO: ${{ needs.pr-image-names-override-branch.outputs.dev_repository }}
       UNVETTED_IMAGE: ${{ needs.pr-image-names-override-branch.outputs.unvetted_image }}
+      UNVETTED_REPO: ${{ needs.pr-image-names-override-branch.outputs.unvetted_repository }}
       VETTED_IMAGE: ${{ needs.pr-image-names-override-branch.outputs.vetted_image }}
+      VETTED_REPO: ${{ needs.pr-image-names-override-branch.outputs.vetted_repository }}
       NORM_BRANCH: my-branch
     steps:
       - name: Image Names
@@ -160,6 +231,19 @@ jobs:
       - name: Verify Vetted Image Name
         if: ${{ success() || failure() }}
         run: test "$VETTED_IMAGE" = "${{ github.repository }}_${NORM_BRANCH}:${{ github.event.pull_request.head.sha }}"
+      - name: Repository Names
+        run: |
+          echo "Dev Repository Name      : ${DEV_REPO}"
+          echo "Unvetted Repository Name : ${UNVETTED_REPO}"
+          echo "Vetted Repository Name   : ${VETTED_REPO}"
+      - name: Verify Dev Repository Name
+        run: test "$DEV_REPO" = "${{ github.repository }}_${NORM_BRANCH}-dev"
+      - name: Verify Unvetted Repository Name
+        if: ${{ success() || failure() }}
+        run: test "$UNVETTED_REPO" = "${{ github.repository }}_${NORM_BRANCH}-unvetted"
+      - name: Verify Vetted Repository Name
+        if: ${{ success() || failure() }}
+        run: test "$VETTED_REPO" = "${{ github.repository }}_${NORM_BRANCH}"
 
   # --- Build/Push Multi-platform Image ---
 
