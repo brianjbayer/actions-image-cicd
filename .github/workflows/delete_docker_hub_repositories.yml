@@ -21,8 +21,6 @@ on:
         description: "The git reference for the action"
         required: false
         type: string
-        # Pin previous version of the action to avoid breaking changes
-        default: v0.2.5
 
     secrets:
       registry_u:
@@ -61,7 +59,7 @@ jobs:
 
       - name: Delete Hub repository ${{ steps.extract-repo-name.outputs.hub_repo }}
         id: delete-docker-repos
-        uses: ./action-repo/.github/workflows/actions/delete-docker-hub-repository
+        uses: ./action-repo/.github/actions/delete-docker-hub-repository
         with:
           docker-hub-repository: ${{ steps.extract-repo-name.outputs.hub_repo }}
           docker-hub-username: ${{ secrets.registry_u }}
