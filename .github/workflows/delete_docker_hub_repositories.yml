@@ -21,6 +21,8 @@ on:
         description: "The git reference for the action"
         required: false
         type: string
+        # Pin previous version of the action to avoid breaking changes
+        default: v0.2.5
 
     secrets:
       registry_u:
