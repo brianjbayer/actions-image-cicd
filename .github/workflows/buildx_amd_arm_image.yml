@@ -17,23 +17,41 @@ on:
         required: true
         type: string
       buildopts:
-        description: Optional docker buildx options
+        description: Optional docker buildx options e.g. --target
         type: string
       runner_general:
-        description: "The type of runner for the general jobs in workflow (Default: ubuntu-24.04-arm)"
+        description: "The type of runner for the general jobs in workflow (ubuntu-24.04-arm)"
         required: false
         type: string
         default: ubuntu-24.04-arm
       runner_amd64:
-        description: "The type of linux/amd64 runner for this workflow (Default: ubuntu-latest)"
+        description: "The type of linux/amd64 runner for this workflow (ubuntu-latest)"
         required: false
         type: string
         default: ubuntu-latest
       runner_arm64:
-        description: "The type of linux/arm64 runner for this workflow (Default: ubuntu-24.04-arm)"
+        description: "The type of linux/arm64 runner for this workflow (ubuntu-24.04-arm)"
         required: false
         type: string
         default: ubuntu-24.04-arm
+      summary:
+        description: "Add a summary report to the workflow run (true)"
+        required: false
+        type: boolean
+        default: true
+      # Registry build caches
+      edge_build_cache_name:
+        description: 'The name of the global "edge" build cache'
+        required: false
+        type: string
+      root_build_cache_name:
+        description: 'The name of the global "root" build cache'
+        required: false
+        type: string
+      branch_build_cache_name:
+        description: 'The name of the global "branch" build cache'
+        required: false
+        type: string
 
 jobs:
 
@@ -54,21 +72,49 @@ jobs:
       - name: Image name
         run: echo "Image name [${{ inputs.image }}-${{ matrix.platform.name }}]"
 
+      - name: Login to DockerHub registry
+        run: echo ${{ secrets.registry_p }} | docker login -u ${{ secrets.registry_u }} --password-stdin
+
       - name: Set up Docker buildx
         id: buildx
         uses: docker/setup-buildx-action@v3
-
-      - name: Login to DockerHub registry
-        run: echo ${{ secrets.registry_p }} | docker login -u ${{ secrets.registry_u }} --password-stdin
 
       - name: Buildx and push image
         env:
           DOCKER_BUILDKIT: 1
           BUILDOPTS: ${{ inputs.buildopts }}
         run: |
+          # Edge cache is both read and write
+          if [ -n "${{ inputs.edge_build_cache_name }}" ] ; then
+            edge_cache_name="${{ inputs.edge_build_cache_name }}-${{ matrix.platform.name }}"
+            echo "Using Edge Cache: [${edge_cache_name}]"
+
+            BUILDOPTS="${BUILDOPTS} --cache-from type=registry,ref=${edge_cache_name}"
+            BUILDOPTS="${BUILDOPTS} --cache-to type=registry,ref=${edge_cache_name},mode=max"
+          fi
+
+          # Root cache is read only
+          if [ -n "${{ inputs.root_build_cache_name }}" ] ; then
+            root_cache_name="${{ inputs.root_build_cache_name }}-${{ matrix.platform.name }}"
+            echo "Using Root Cache: [${root_cache_name}]"
+
+            BUILDOPTS="${BUILDOPTS} --cache-from type=registry,ref=${root_cache_name}"
+          fi
+
+          # Branch cache is both read and write
+          if [ -n "${{ inputs.branch_build_cache_name }}" ] ; then
+            branch_cache_name="${{ inputs.branch_build_cache_name }}-${{ matrix.platform.name }}"
+            echo "Using Branch Cache: [${branch_cache_name}]"
+
+            BUILDOPTS="${BUILDOPTS} --cache-from type=registry,ref=${branch_cache_name}"
+            BUILDOPTS="${BUILDOPTS} --cache-to type=registry,ref=${branch_cache_name},mode=max"
+          fi
+          echo "Build options..."
+          echo ["${BUILDOPTS}"]
+
           docker pull ${{ inputs.image }}-${{ matrix.platform.name }} \
           || docker buildx build \
-            --no-cache ${BUILDOPTS} \
+            ${BUILDOPTS} \
             --push --platform linux/${{ matrix.platform.name }} \
             --tag ${{ inputs.image }}-${{ matrix.platform.name }} \
             .
@@ -87,6 +133,10 @@ jobs:
       - name: Login to DockerHub registry
         run: echo ${{ secrets.registry_p }} | docker login -u ${{ secrets.registry_u }} --password-stdin
 
+      - name: Set up Docker buildx
+        id: buildx
+        uses: docker/setup-buildx-action@v3
+
       - name: Create and push multiplatform image
         run: |
           docker pull ${IMAGE} || docker buildx imagetools create -t ${IMAGE} ${IMAGE}-amd64 ${IMAGE}-arm64
@@ -96,3 +146,11 @@ jobs:
 
       - name: Annotate image name
         run: echo "::notice::Built and pushed multiplatform image [${IMAGE}]"
+
+      - name: Summary report
+        if: ${{ inputs.summary }}
+        run: |
+          cat <<EOF >> $GITHUB_STEP_SUMMARY
+          ### Multiplatform Image Built and Pushed
+          \`${IMAGE}\`
+          EOF
