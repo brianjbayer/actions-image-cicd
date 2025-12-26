@@ -298,11 +298,26 @@ jobs:
         if: ${{ success() || failure() }}
         run: test "$BRANCH_CACHE_NAME" = "${{ github.repository }}_${NORM_BRANCH}:cache"
 
+
+  # --- Refresh Registry Cache ---
+
+  refresh_branch_build_cache:
+    name: Refresh Branch Build Cache (Default)
+    needs: pr-image-names-with-branch
+    uses: ./.github/workflows/refresh_amd_arm_build_cache.yml
+    with:
+      build_cache_name: ${{ needs.pr-image-names-with-branch.outputs.branch_build_cache_name }}
+    secrets:
+      registry_u: ${{ secrets.DOCKER_HUB_USERNAME }}
+      registry_p: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
+
   # --- Build/Push Multi-platform Image ---
 
   buildx_push_amd_arm_image:
     name: Build Multiplatform(amd/arm) Image
-    needs: pr-image-names-with-branch
+    needs:
+      - pr-image-names-with-branch
+      - refresh_branch_build_cache
     uses: ./.github/workflows/buildx_amd_arm_image.yml
     with:
       image: ${{ needs.pr-image-names-with-branch.outputs.unvetted_image }}
