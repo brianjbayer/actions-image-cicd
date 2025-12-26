@@ -34,11 +34,11 @@ jobs:
       TARGET_IMAGE: ${{ inputs.target_image }}
 
     steps:
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
       - name: Login to DockerHub Registry
         run: echo ${{ secrets.registry_p }} | docker login -u ${{ secrets.registry_u }} --password-stdin
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
       - name: Copy image (buildx imagetools create)
         run: |
