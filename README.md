@@ -1,4 +1,5 @@
 # actions-image-cicd
+
 This repository contains Reusable GitHub Actions Workflows
 that can be called by other GitHub Actions Workflows to
 reduce duplication, effort, and risk.
@@ -16,86 +17,162 @@ and the gist [The Basics of GitHub Actions Reusable Workflows](https://gist.gith
 
 ### Reusable Workflows
 
+#### buildx_amd_arm_image.yml
+
+Idempotent multi-platform amd64/arm64 image build and push workflow.
+
+**Inputs:**
+
+- `image` - Name of the image to build and push (required)
+- `buildopts` - Optional docker buildx options (e.g. --target)
+- `runner_general` - Runner for general jobs (default: ubuntu-24.04-arm)
+- `runner_amd64` - Runner for linux/amd64 builds (default: ubuntu-latest)
+- `runner_arm64` - Runner for linux/arm64 builds (default: ubuntu-24.04-arm)
+- `summary` - Add summary report (default: true)
+- `edge_build_cache_name` - Edge build cache name (optional)
+- `root_build_cache_name` - Root build cache name (optional)
+- `branch_build_cache_name` - Branch build cache name (optional)
+
+**Secrets:**
+
+- `registry_u` - Docker registry username
+- `registry_p` - Docker registry password/PAT
+
 #### buildx_push_image.yml
+
 Idempotent multi-platform image build and push workflow.
 
 **Inputs:**
+
 - `image` - Name of the image to build and push (required)
 - `platforms` - Image platforms to build (required)
 - `buildopts` - Optional docker buildx options
 - `runner` - Type of runner (default: ubuntu-latest)
 
 **Secrets:**
+
 - `registry_u` - Docker registry username
 - `registry_p` - Docker registry password/PAT
 
 #### copy_image.yml
+
 Copies/promotes an image from one tag to another.
 
 **Inputs:**
+
 - `from_image` - Source image to copy from (required)
 - `to_image` - Target image to copy to (required)
 - `runner` - Runner type (default: ubuntu-latest)
 
 **Secrets:**
+
 - `registry_u` - Docker registry username
 - `registry_p` - Docker registry password/PAT
 
+#### image_names.yml
+
+Development, unvetted, and vetted deployment image name generation.
+
+**Inputs:**
+
+- `runner` - Runner type (default: ubuntu-latest)
+- `image_base_name` - Image name including registry and repository (default: github.repository)
+- `add_branch_name` - Append branch name to image names (default: false)
+- `branch_name` - Non-normalized branch name (default: github.head_ref)
+- `tag` - Tag for image names (default: github.event.pull_request.head.sha)
+- `include_build_caches` - Include registry build cache names (default: true)
+- `build_cache_tag` - Tag for build cache images (default: cache)
+- `edge_build_cache_root` - Edge build cache root name (default: github.repository_owner/buildcache)
+- `edge_build_cache_label` - Edge build cache label (default: -ruby)
+
+**Outputs:**
+
+- `vetted_image` - Vetted deployment image name
+- `vetted_repository` - Vetted deployment repository name
+- `unvetted_image` - Unvetted deployment image name
+- `unvetted_repository` - Unvetted deployment repository name
+- `dev_image` - Development environment image name
+- `dev_repository` - Development environment repository name
+- `edge_build_cache_name` - Global edge build cache name
+- `root_build_cache_name` - Project root build cache name
+- `branch_build_cache_name` - Branch build cache name
+
 #### delete_docker_hub_repositories.yml
+
 Matrix-based deletion of Docker Hub repositories.
 
 **Inputs:**
+
 - `repositories` - JSON array of repository names to delete (required)
 - `runner` - Runner type (default: ubuntu-latest)
 - `summary` - Add summary report (default: true)
 - `ref` - Git reference for action checkout (optional)
 
 **Secrets:**
+
 - `registry_u` - Docker registry username
 - `registry_p` - Docker registry password/PAT
 
 #### get_merged_branch_last_commit.yml
+
 Gets merged branch and last commit information.
 
 **Outputs:**
+
 - `merged_branch` - The name of the merged branch
 - `last_commit` - The SHA of the last commit
 
-#### image_names.yml
-Image name normalization and validation.
+#### refresh_amd_arm_build_cache.yml
+
+Refresh amd64 and arm64 registry build cache.
 
 **Inputs:**
-- `name_base` - Base name for the image (required)
-- `branch` - Branch name for tag (required)
 
-**Outputs:**
-- `normalized_name` - Docker-compatible normalized image name
+- `build_cache_name` - Registry build cache name to recreate (required)
+- `ref` - Git reference for build cache source (default: HEAD)
+- `buildopts_list` - JSON array of docker buildx options (e.g. ["", "--target"])
+- `runner_general` - Runner for general jobs (default: ubuntu-24.04-arm)
+- `runner_amd64` - Runner for linux/amd64 builds (default: ubuntu-latest)
+- `runner_arm64` - Runner for linux/arm64 builds (default: ubuntu-24.04-arm)
+- `summary` - Add summary report (default: true)
+
+**Secrets:**
+
+- `registry_u` - Docker registry username
+- `registry_p` - Docker registry password/PAT
 
 #### latest_tag.yml
+
 Latest tag for reuse in calling Reusable Workflows (`with:`)
 
 **Inputs:**
+
 - `latest_tag` - Tag for latest image names (Default: latest)
 
 **Outputs:**
+
 - `tag` - The latest tag
 
 ### Actions (Dockerfile-based)
 
 #### delete-docker-hub-repository
+
 Container action to delete a Docker Hub repository.
 
 **Inputs:**
+
 - `docker-hub-repository` - Repository name to delete (required)
 - `docker-hub-username` - Docker Hub username (required)
 - `docker-hub-password` - Docker Hub password/token (required)
 
 ## Intent of the Workflows
+
 These workflows were designed to be simple cohesive building blocks called
 within the using repository's own customized workflows where the high-level
 logic is.
 
 ## Using These Reusable Workflows
+
 > :warning: the `.github/workflows/on_*_checks.yml` workflows are
 > **not** reusable.
 
@@ -105,12 +182,13 @@ The GitHub Actions
 
 Examples of using and calling the reusable workflows in this repository
 can be found in the _Checks_ for this repository.  See...
-  * [.github/workflows/on_pr_checks.yml](https://github.com/brianjbayer/actions-image-cicd/blob/main/.github/workflows/on_pr_checks.yml)
 
-  * [.github/workflows/on_push_merge_checks.yml](https://github.com/brianjbayer/actions-image-cicd/blob/main/.github/workflows/on_push_merge_checks.yml)
+* [.github/workflows/on_pr_checks.yml](https://github.com/brianjbayer/actions-image-cicd/blob/main/.github/workflows/on_pr_checks.yml)
 
+* [.github/workflows/on_push_merge_checks.yml](https://github.com/brianjbayer/actions-image-cicd/blob/main/.github/workflows/on_push_merge_checks.yml)
 
 ## Intended CI/CD Flow
+
 These workflows were developed specifically for a CI/CD flow where a commit
 image is considered the release candidate image.  If the image passes all
 automated CI checks and tests, then it is promoted as a release candidate.
@@ -136,17 +214,21 @@ it is not so available in the Push (i.e. merge) Actions.
 
 With this intended CI/CD, there are two basic GitHub Actions workflows...
   * **On Pull Request...**
+
     1. Build and push unvetted potential release candidate image from
        commit using:
+
        ```
        .github/workflows/buildx_push_image.yml@v0.2.0
        ```
+
     2. Pull and perform vetting (e.g. linting, security scans,
        unit tests, end-to-end tests etc) on pushed unvetted potential
        release candidate image
     3. If all vetting checks passed, promote the unvetted potential
        release candidate image to an actual release candidate image
        using:
+
        ```
        .github/workflows/copy_image.yml@v0.2.0
        ```
@@ -154,15 +236,20 @@ With this intended CI/CD, there are two basic GitHub Actions workflows...
   * **On Push to main (merge)...**
     1. Get the merged branch and the last commit of it to determine
       the release candidate image name using:
+
        ```
        .github/workflows/get_merged_branch_last_commit.yml@v0.2.0
        ```
+
     2. Promote the release candidate image to production using:
+
        ```
        .github/workflows/copy_image.yml@v0.2.0
        ```
+
     3. Optionally tag the just promoted production image as latest
        using:
+
        ```
        .github/workflows/copy_image_to_latest.yml@v0.2.0
        ```
@@ -171,6 +258,7 @@ For more on image-based CI/CD, see the gist
 [An Image-Based Continuous Integration / Continuous Deployment Model](https://gist.github.com/brianjbayer/e5e9f07e0923d8d097d7b03803ea837b).
 
 ## Testing
+
 When modifying/developing workflows in this repository, changes should
 be on a branch in this repository and tested (especially merge/on push
 related workflows) using another test bed repository to call these
