@@ -125,33 +125,52 @@ jobs:
       UNVETTED_REPO: ${{ needs.pr-image-names-no-branch.outputs.unvetted_repository }}
       VETTED_IMAGE: ${{ needs.pr-image-names-no-branch.outputs.vetted_image }}
       VETTED_REPO: ${{ needs.pr-image-names-no-branch.outputs.vetted_repository }}
+      EDGE_CACHE_NAME: ${{ needs.pr-image-names-no-branch.outputs.edge_build_cache_name }}
+      ROOT_CACHE_NAME: ${{ needs.pr-image-names-no-branch.outputs.root_build_cache_name }}
+      BRANCH_CACHE_NAME: ${{ needs.pr-image-names-no-branch.outputs.branch_build_cache_name }}
     steps:
       - name: Image Names
         run: |
           echo "Dev Image Name      : ${DEV_IMAGE}"
           echo "Unvetted Image Name : ${UNVETTED_IMAGE}"
           echo "Vetted Image Name   : ${VETTED_IMAGE}"
-      - name: Verify Dev Image Name
-        run: test "$DEV_IMAGE" = "${{ github.repository }}-dev:${{ github.event.pull_request.head.sha }}"
-      - name: Verify Unvetted Image Name
-        if: ${{ success() || failure() }}
-        run: test "$UNVETTED_IMAGE" = "${{ github.repository }}-unvetted:${{ github.event.pull_request.head.sha }}"
       - name: Verify Vetted Image Name
         if: ${{ success() || failure() }}
         run: test "$VETTED_IMAGE" = "${{ github.repository }}:${{ github.event.pull_request.head.sha }}"
+      - name: Verify Unvetted Image Name
+        if: ${{ success() || failure() }}
+        run: test "$UNVETTED_IMAGE" = "${{ github.repository }}-unvetted:${{ github.event.pull_request.head.sha }}"
+      - name: Verify Dev Image Name
+        if: ${{ success() || failure() }}
+        run: test "$DEV_IMAGE" = "${{ github.repository }}-dev:${{ github.event.pull_request.head.sha }}"
       - name: Repository Names
         run: |
           echo "Dev Repository Name      : ${DEV_REPO}"
           echo "Unvetted Repository Name : ${UNVETTED_REPO}"
           echo "Vetted Repository Name   : ${VETTED_REPO}"
-      - name: Verify Dev Repository Name
-        run: test "$DEV_REPO" = "${{ github.repository }}-dev"
-      - name: Verify Unvetted Repository Name
-        if: ${{ success() || failure() }}
-        run: test "$UNVETTED_REPO" = "${{ github.repository }}-unvetted"
       - name: Verify Vetted Repository Name
         if: ${{ success() || failure() }}
         run: test "$VETTED_REPO" = "${{ github.repository }}"
+      - name: Verify Unvetted Repository Name
+        if: ${{ success() || failure() }}
+        run: test "$UNVETTED_REPO" = "${{ github.repository }}-unvetted"
+      - name: Verify Dev Repository Name
+        if: ${{ success() || failure() }}
+        run: test "$DEV_REPO" = "${{ github.repository }}-dev"
+      - name: Build Cache Names
+        run: |
+          echo "Edge Cache Name   : ${EDGE_CACHE_NAME}"
+          echo "Root Cache Name   : ${ROOT_CACHE_NAME}"
+          echo "Branch Cache Name : ${BRANCH_CACHE_NAME}"
+      - name: Verify Edge Cache Name
+        if: ${{ success() || failure() }}
+        run: test "$EDGE_CACHE_NAME" = "${{ github.repository_owner }}/buildcache-ruby:cache"
+      - name: Verify Root Cache Name
+        if: ${{ success() || failure() }}
+        run: test "$ROOT_CACHE_NAME" = "${{ github.repository }}:cache"
+      - name: Verify Branch Cache Name
+        if: ${{ success() || failure() }}
+        run: test "$BRANCH_CACHE_NAME" = "${{ github.repository }}:cache-${{ github.head_ref }}"
 
   pr-image-names-with-branch:
     name: Generate PR (Branch) Image Names
@@ -170,6 +189,9 @@ jobs:
       UNVETTED_REPO: ${{ needs.pr-image-names-with-branch.outputs.unvetted_repository }}
       VETTED_IMAGE: ${{ needs.pr-image-names-with-branch.outputs.vetted_image }}
       VETTED_REPO: ${{ needs.pr-image-names-with-branch.outputs.vetted_repository }}
+      EDGE_CACHE_NAME: ${{ needs.pr-image-names-with-branch.outputs.edge_build_cache_name }}
+      ROOT_CACHE_NAME: ${{ needs.pr-image-names-with-branch.outputs.root_build_cache_name }}
+      BRANCH_CACHE_NAME: ${{ needs.pr-image-names-with-branch.outputs.branch_build_cache_name }}
     steps:
       - name: Image Names
         run: |
@@ -197,6 +219,20 @@ jobs:
       - name: Verify Vetted Repository Name
         if: ${{ success() || failure() }}
         run: test "$VETTED_REPO" = "${{ github.repository }}_${{ github.head_ref }}"
+      - name: Build Cache Names
+        run: |
+          echo "Edge Cache Name   : ${EDGE_CACHE_NAME}"
+          echo "Root Cache Name   : ${ROOT_CACHE_NAME}"
+          echo "Branch Cache Name : ${BRANCH_CACHE_NAME}"
+      - name: Verify Edge Cache Name
+        if: ${{ success() || failure() }}
+        run: test "$EDGE_CACHE_NAME" = "${{ github.repository_owner }}/buildcache-ruby:cache"
+      - name: Verify Root Cache Name
+        if: ${{ success() || failure() }}
+        run: test "$ROOT_CACHE_NAME" = "${{ github.repository }}:cache"
+      - name: Verify Branch Cache Name
+        if: ${{ success() || failure() }}
+        run: test "$BRANCH_CACHE_NAME" = "${{ github.repository }}_${{ github.head_ref }}:cache"
 
   pr-image-names-override-branch:
     name: Override PR Branch Image Names
@@ -217,6 +253,9 @@ jobs:
       VETTED_IMAGE: ${{ needs.pr-image-names-override-branch.outputs.vetted_image }}
       VETTED_REPO: ${{ needs.pr-image-names-override-branch.outputs.vetted_repository }}
       NORM_BRANCH: my-branch
+      EDGE_CACHE_NAME: ${{ needs.pr-image-names-override-branch.outputs.edge_build_cache_name }}
+      ROOT_CACHE_NAME: ${{ needs.pr-image-names-override-branch.outputs.root_build_cache_name }}
+      BRANCH_CACHE_NAME: ${{ needs.pr-image-names-override-branch.outputs.branch_build_cache_name }}
     steps:
       - name: Image Names
         run: |
@@ -244,15 +283,47 @@ jobs:
       - name: Verify Vetted Repository Name
         if: ${{ success() || failure() }}
         run: test "$VETTED_REPO" = "${{ github.repository }}_${NORM_BRANCH}"
+      - name: Build Cache Names
+        run: |
+          echo "Edge Cache Name   : ${EDGE_CACHE_NAME}"
+          echo "Root Cache Name   : ${ROOT_CACHE_NAME}"
+          echo "Branch Cache Name : ${BRANCH_CACHE_NAME}"
+      - name: Verify Edge Cache Name
+        if: ${{ success() || failure() }}
+        run: test "$EDGE_CACHE_NAME" = "${{ github.repository_owner }}/buildcache-ruby:cache"
+      - name: Verify Root Cache Name
+        if: ${{ success() || failure() }}
+        run: test "$ROOT_CACHE_NAME" = "${{ github.repository }}:cache"
+      - name: Verify Branch Cache Name
+        if: ${{ success() || failure() }}
+        run: test "$BRANCH_CACHE_NAME" = "${{ github.repository }}_${NORM_BRANCH}:cache"
+
+
+  # --- Refresh Registry Cache ---
+
+  refresh_branch_build_cache:
+    name: Refresh Branch Build Cache (Default)
+    needs: pr-image-names-with-branch
+    uses: ./.github/workflows/refresh_amd_arm_build_cache.yml
+    with:
+      build_cache_name: ${{ needs.pr-image-names-with-branch.outputs.branch_build_cache_name }}
+    secrets:
+      registry_u: ${{ secrets.DOCKER_HUB_USERNAME }}
+      registry_p: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
 
   # --- Build/Push Multi-platform Image ---
 
   buildx_push_amd_arm_image:
     name: Build Multiplatform(amd/arm) Image
-    needs: pr-image-names-with-branch
+    needs:
+      - pr-image-names-with-branch
+      - refresh_branch_build_cache
     uses: ./.github/workflows/buildx_amd_arm_image.yml
     with:
       image: ${{ needs.pr-image-names-with-branch.outputs.unvetted_image }}
+      edge_build_cache_name: ${{ needs.pr-image-names-with-branch.outputs.edge_build_cache_name }}
+      root_build_cache_name: ${{ needs.pr-image-names-with-branch.outputs.root_build_cache_name }}
+      branch_build_cache_name: ${{ needs.pr-image-names-with-branch.outputs.branch_build_cache_name }}
     secrets:
       registry_u: ${{ secrets.DOCKER_HUB_USERNAME }}
       registry_p: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}

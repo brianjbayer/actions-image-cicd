@@ -43,15 +43,15 @@ jobs:
       - name: Image name
         run: echo "Image name [${IMAGE}]"
 
+      - name: Login to DockerHub registry
+        run: echo ${{ secrets.registry_p }} | docker login -u ${{ secrets.registry_u }} --password-stdin
+
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
 
       - name: Set up Docker buildx
         id: buildx
         uses: docker/setup-buildx-action@v3
-
-      - name: Login to DockerHub registry
-        run: echo ${{ secrets.registry_p }} | docker login -u ${{ secrets.registry_u }} --password-stdin
 
       - name: If not pull image, buildx and push image
         env:

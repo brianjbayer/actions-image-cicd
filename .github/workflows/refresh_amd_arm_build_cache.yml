@@ -1,0 +1,111 @@
+name: Refresh the amd64 and arm4 Registry Build Cache
+
+on:
+  workflow_call:
+
+    secrets:
+      registry_u:
+        description: The username for the docker login
+        required: true
+      registry_p:
+        description: The password (PAT) for the docker login
+        required: true
+
+    inputs:
+      build_cache_name:
+        description: The name of the registry build cache to recreate
+        required: true
+        type: string
+      ref:
+        description: "The git reference to use as the source of the build cache (HEAD)"
+        required: false
+        type: string
+      buildopts_list:
+        description: "List of optional docker buildx options e.g --target (JSON array)"
+        type: string
+      runner_general:
+        description: "The type of runner for the general jobs in workflow (ubuntu-24.04-arm)"
+        required: false
+        type: string
+        default: ubuntu-24.04-arm
+      runner_amd64:
+        description: "The type of linux/amd64 runner for this workflow (ubuntu-latest)"
+        required: false
+        type: string
+        default: ubuntu-latest
+      runner_arm64:
+        description: "The type of linux/arm64 runner for this workflow (ubuntu-24.04-arm)"
+        required: false
+        type: string
+        default: ubuntu-24.04-arm
+      summary:
+        description: "Add a summary report to the workflow run (true)"
+        required: false
+        type: boolean
+        default: true
+
+jobs:
+
+  refresh-build-cache:
+    name: 'Refresh Registry Build Cache "${{ inputs.build_cache_name }}-${{ matrix.platform.name }}"'
+    runs-on: ${{ matrix.platform.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        # Build just the default layer as default
+        buildopts: ${{ fromJSON(inputs.buildopts_list || '[""]') }}
+        platform:
+          - name: amd64
+            runner: ${{ inputs.runner_amd64 }}
+          - name: arm64
+            runner: ${{ inputs.runner_arm64 }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build cache name
+        run: echo "Build cache name [${{ inputs.build_cache_name }}-${{ matrix.platform.name }}]"
+
+      - name: Login to DockerHub registry
+        run: echo ${{ secrets.registry_p }} | docker login -u ${{ secrets.registry_u }} --password-stdin
+
+      - name: Set up Docker buildx
+        id: buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Buildx and push cache
+        env:
+          DOCKER_BUILDKIT: 1
+          BUILDOPTS: ${{ matrix.buildopts }}
+          BUILD_CACHE: ${{ inputs.build_cache_name }}-${{ matrix.platform.name }}
+        run: |
+          echo "Build Options: [${BUILDOPTS}]"
+
+          docker buildx build \
+            ${BUILDOPTS} \
+            --platform linux/${{ matrix.platform.name }} \
+            --cache-from=type=registry,ref=${BUILD_CACHE},max=0 \
+            --cache-to=type=registry,ref=${BUILD_CACHE},mode=max \
+            -t notpushedanyway:latest .
+
+      - name: Logout of DockerHub registry
+        run: docker logout
+
+  report:
+    name: Report on Registry Build Cache Refresh
+    runs-on: ${{ inputs.runner_general }}
+    needs: refresh-build-cache
+    env:
+      BUILD_CACHE_NAME: ${{ inputs.build_cache_name }}
+
+    steps:
+
+      - name: Annotate build cache refresh
+        run: echo "::notice::Recreated registry build cache [${BUILD_CACHE_NAME}]"
+
+      - name: Summary report
+        if: ${{ inputs.summary }}
+        run: |
+          cat <<EOF >> $GITHUB_STEP_SUMMARY
+          ### Multiplatform Registry Build Cache Rebuild
+          Refreshed Build Cache: \`${BUILD_CACHE_NAME}\`
+          EOF
