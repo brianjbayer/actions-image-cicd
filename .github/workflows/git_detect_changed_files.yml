@@ -34,7 +34,7 @@ jobs:
       any_changed: ${{ steps.detect-changed-files.outputs.any_changed }}
 
     steps:
-      - name: Checkout
+      - name: Checkout repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 0

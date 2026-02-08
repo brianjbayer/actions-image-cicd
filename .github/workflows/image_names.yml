@@ -100,7 +100,8 @@ jobs:
       name: ${{ steps.generate.outputs.base_name }}
 
     steps:
-      - id: generate
+      - name: Generate
+        id: generate
         run: |
           base_name=${{ inputs.image_base_name }}
 
@@ -132,7 +133,8 @@ jobs:
       dev_repository: ${{ steps.generate.outputs.dev_repository }}
 
     steps:
-      - id: generate
+      - name: Generate
+        id: generate
         run: |
           vetted_repository=${{ needs.generate-base-name.outputs.name }}
           echo "vetted_repository=${vetted_repository}" >> $GITHUB_OUTPUT
@@ -170,7 +172,8 @@ jobs:
       branch_build_cache_name: ${{ steps.generate.outputs.branch_cache }}
 
     steps:
-      - id: generate
+      - name: Generate
+        id: generate
         run: |
           edge_cache="${{ inputs.edge_build_cache_root }}${{ inputs.edge_build_cache_label }}:${{ inputs.build_cache_tag }}"
           echo "edge_cache=${edge_cache}" >> $GITHUB_OUTPUT

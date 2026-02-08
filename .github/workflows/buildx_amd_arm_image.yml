@@ -67,7 +67,9 @@ jobs:
           - name: arm64
             runner: ${{ inputs.runner_arm64 }}
     steps:
-      - uses: actions/checkout@v4
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
       - name: Image name
         run: echo "Image name [${{ inputs.image }}-${{ matrix.platform.name }}]"

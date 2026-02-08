@@ -34,10 +34,10 @@ jobs:
       TARGET_IMAGE: ${{ inputs.target_image }}
 
     steps:
-      - name: Login to DockerHub Registry
+      - name: Login to DockerHub registry
         run: echo ${{ secrets.registry_p }} | docker login -u ${{ secrets.registry_u }} --password-stdin
 
-      - name: Set up Docker Buildx
+      - name: Set up Docker buildx
         uses: docker/setup-buildx-action@v3
 
       - name: Copy image (buildx imagetools create)
@@ -46,7 +46,7 @@ jobs:
             --tag ${{ inputs.target_image }} \
             ${{ inputs.source_image }}
 
-      - name: Logout of DockerHub Registry
+      - name: Logout of DockerHub registry
         run: docker logout
 
       - name: Annotate copied image

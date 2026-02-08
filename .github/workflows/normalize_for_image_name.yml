@@ -30,7 +30,9 @@ jobs:
     steps:
       - name: Normalize input
         run: echo "Inputted RAW_NAME=[${RAW_NAME}]"
-      - id: normalize
+
+      - name: Normalize
+        id: normalize
         # Normalization...
         #  1. Convert non-alphanumeric to space and remove any duplicate spaces (tr -cs)
         #  2. Convert any uppercase letters to lowercase (tr '[:upper:]' '[:lower:]')
