@@ -30,10 +30,15 @@ on:
         type: string
         default: ubuntu-latest
       amd64_tag:
-        description: "The amd64 architecture tag/name"
+        description: "The amd64 architecture tag/name (amd64)"
         required: false
         type: string
         default: amd64
+      amd64_platform:
+        description: "The amd64 platform(linux/amd64)"
+        required: false
+        type: string
+        default: linux/amd64
       runner_arm64:
         description: "The type of linux/arm64 runner for this workflow (ubuntu-24.04-arm)"
         required: false
@@ -44,6 +49,11 @@ on:
         required: false
         type: string
         default: arm64
+      arm64_platform:
+        description: "The arm64 platform(linux/arm64)"
+        required: false
+        type: string
+        default: linux/arm64
       summary:
         description: "Add a summary report to the workflow run (true)"
         required: false
@@ -65,8 +75,35 @@ on:
 
 jobs:
 
+  platform-image-names:
+   name: Set the platform image name if building
+   runs-on: ${{ inputs.runner_general }}
+   env:
+    AMD_IMAGE: ${{ inputs.image }}-${{ inputs.amd64_tag }}
+    ARM_IMAGE: ${{ inputs.image }}-${{ inputs.arm64_tag }}
+   outputs:
+    amd-name: ${{ steps.if-build.outputs.amd-name }}
+    arm-name: ${{ steps.if-build.outputs.arm-name }}
+   steps:
+    - id: if-build
+      run: |
+        [ -n "${{ inputs.runner_amd64 }}" ] && echo "amd-name=${AMD_IMAGE}" >> $GITHUB_OUTPUT || true
+        [ -n "${{ inputs.runner_arm64 }}" ] && echo "arm-name=${ARM_IMAGE}" >> $GITHUB_OUTPUT || true
+
+    - name: Verify a platform
+      run: |
+        if [ -z "${{ steps.if-build.outputs.amd-name }}" ] && [ -z "${{ steps.if-build.outputs.arm-name }}" ]; then
+          error_message='At least one platform must be built - no platform runners specified'
+          echo "${error_message}"
+          echo "::error::${error_message}"
+          exit 1
+        fi
+        echo "AMD Platform Image: [${{ steps.if-build.outputs.amd-name }}]"
+        echo "ARM Platform Image: [${{ steps.if-build.outputs.arm-name }}]"
+
   buildx-and-push-image:
     name: Build and Push Platform Image
+    needs: platform-image-names
     runs-on: ${{ matrix.platform.runner || inputs.runner_general }}
     strategy:
       fail-fast: false
@@ -74,41 +111,34 @@ jobs:
         platform:
           - name: ${{ inputs.amd64_tag }}
             runner: ${{ inputs.runner_amd64 }}
+            image: ${{ needs.platform-image-names.outputs.amd-name }}
+            value: ${{ inputs.amd64_platform }}
           - name: ${{ inputs.arm64_tag }}
             runner: ${{ inputs.runner_arm64 }}
+            image: ${{ needs.platform-image-names.outputs.arm-name }}
+            value: ${{ inputs.arm64_platform }}
+
     steps:
-
-      - name: Platform image name if build platform
-        id: if-build-platform
-        run: |
-          if [ -z "${{ matrix.platform.runner }}" ]]; then
-            echo "Skipping build of ${{ matrix.platform.name }} image"
-          else
-            platform_image_name="${{ inputs.image }}-${{ matrix.platform.name }}"
-            echo "Building ${{ matrix.platform.name }} image [${platform_image_name}]"
-
-            echo "platform_image=${platform_image_name}" >> $GITHUB_OUTPUT
-          fi
 
       - name: Checkout repository
         uses: actions/checkout@v4
-        if: 'steps.if-build-platform.outputs.platform_image'
+        if:  matrix.platform.image
 
       - name: Image name
-        if: 'steps.if-build-platform.outputs.platform_image'
-        run: echo "Image name [${{ steps.if-build-platform.outputs.platform_image }}]"
+        if:  matrix.platform.image
+        run: echo "Image name [${{ matrix.platform.image }}]"
 
       - name: Login to DockerHub registry
-        if: 'steps.if-build-platform.outputs.platform_image'
+        if:  matrix.platform.image
         run: echo ${{ secrets.registry_p }} | docker login -u ${{ secrets.registry_u }} --password-stdin
 
       - name: Set up Docker buildx
         id: buildx
         uses: docker/setup-buildx-action@v3
-        if: 'steps.if-build-platform.outputs.platform_image'
+        if:  matrix.platform.image
 
       - name: Buildx and push image
-        if: 'steps.if-build-platform.outputs.platform_image'
+        if:  matrix.platform.image
         env:
           DOCKER_BUILDKIT: 1
           BUILDOPTS: ${{ inputs.buildopts }}
@@ -141,40 +171,36 @@ jobs:
           echo "Build options..."
           echo ["${BUILDOPTS}"]
 
-          docker pull ${{ inputs.image }}-${{ matrix.platform.name }} \
+          docker pull ${{ matrix.platform.image }} \
           || docker buildx build \
             ${BUILDOPTS} \
-            --push --platform linux/${{ matrix.platform.name }} \
-            --tag ${{ inputs.image }}-${{ matrix.platform.name }} \
+            --push --platform ${{ matrix.platform.value }} \
+            --tag ${{ matrix.platform.image }} \
             .
 
       - name: Logout of DockerHub registry
-        if: 'steps.if-build-platform.outputs.platform_image'
+        if:  matrix.platform.image
         run: docker logout
 
-
       - name: Platform build summary
-        if: 'steps.if-build-platform.outputs.platform_image'
+        if:  matrix.platform.image
         run: |
-          image_fragment="<code>${{ steps.if-build-platform.outputs.platform_image }}</code>"
+          image_fragment="<code>${{ matrix.platform.image }}</code>"
           summary="<b>Built and Pushed <code>${{ matrix.platform.name }}</code> Image:</b><br>${image_fragment}"
           echo "${summary}" >> $GITHUB_STEP_SUMMARY
 
   combine-images:
     name: Create Multiplatform Image
     runs-on: ${{ inputs.runner_general }}
-    needs: buildx-and-push-image
+    needs:
+      - platform-image-names
+      - buildx-and-push-image
     env:
       IMAGE: ${{ inputs.image }}
+      AMD_IMAGE: ${{ needs.platform-image-names.outputs.amd-name }}
+      ARM_IMAGE: ${{ needs.platform-image-names.outputs.arm-name }}
 
     steps:
-
-      - name: There must be a platform
-        run: |
-         if [ -z "${{ inputs.runner_amd64 }}" ] && [ -z "${{ inputs.runner_arm64 }}" ]; then
-           echo "::error::At least must platform must be built - no platform runner specified"
-           exit 1
-         fi
 
       - name: Login to DockerHub registry
         run: echo ${{ secrets.registry_p }} | docker login -u ${{ secrets.registry_u }} --password-stdin
@@ -185,10 +211,9 @@ jobs:
 
       - name: Create and push multiplatform image
         run: |
-          IMAGES=''
-          [ -n "${{ inputs.runner_amd64 }}" ] && IMAGES="${IMAGES} ${{ inputs.image }}-${{ inputs.amd64_tag }}"
-          [ -n "${{ inputs.runner_arm64 }}" ] && IMAGES="${IMAGES} ${{ inputs.image }}-${{ inputs.arm64_tag }}"
-          docker pull ${IMAGE} || docker buildx imagetools create -t ${IMAGE} ${IMAGES}
+          # AT least one platform image is expected/must exist
+          PLATFORM_IMAGES="${AMD_IMAGE} ${ARM_IMAGE}"
+          docker pull ${IMAGE} || docker buildx imagetools create -t ${IMAGE} ${PLATFORM_IMAGES}
 
       - name: Logout of DockerHub registry
         run: docker logout
