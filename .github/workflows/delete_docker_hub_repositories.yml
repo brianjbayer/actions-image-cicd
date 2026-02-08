@@ -2,6 +2,15 @@ name: Delete Image Repositories
 
 on:
   workflow_call:
+
+    secrets:
+      registry_u:
+        description: The username for the docker login
+        required: true
+      registry_p:
+        description: The password (PAT) for the docker login
+        required: true
+
     inputs:
       runner:
         description: "The type of runner for this workflow (Default: ubuntu-latest)"
@@ -21,14 +30,6 @@ on:
         description: "The git reference for the action"
         required: false
         type: string
-
-    secrets:
-      registry_u:
-        description: The username for the docker login
-        required: true
-      registry_p:
-        description: The password (PAT) for the docker login
-        required: true
 
 jobs:
   delete-image-repository:
