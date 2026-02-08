@@ -29,11 +29,21 @@ on:
         required: false
         type: string
         default: ubuntu-latest
+      amd64_tag:
+        description: "The amd64 architecture tag/name"
+        required: false
+        type: string
+        default: amd64
       runner_arm64:
         description: "The type of linux/arm64 runner for this workflow (ubuntu-24.04-arm)"
         required: false
         type: string
         default: ubuntu-24.04-arm
+      arm64_tag:
+        description: "The arm64 architecture tag/name"
+        required: false
+        type: string
+        default: arm64
       summary:
         description: "Add a summary report to the workflow run (true)"
         required: false
@@ -57,31 +67,48 @@ jobs:
 
   buildx-and-push-image:
     name: Build and Push Platform Image
-    runs-on: ${{ matrix.platform.runner }}
+    runs-on: ${{ matrix.platform.runner || inputs.runner_general }}
     strategy:
       fail-fast: false
       matrix:
         platform:
-          - name: amd64
+          - name: ${{ inputs.amd64_tag }}
             runner: ${{ inputs.runner_amd64 }}
-          - name: arm64
+          - name: ${{ inputs.arm64_tag }}
             runner: ${{ inputs.runner_arm64 }}
     steps:
 
+      - name: Platform image name if build platform
+        id: if-build-platform
+        run: |
+          if [ -z "${{ matrix.platform.runner }}" ]]; then
+            echo "Skipping build of ${{ matrix.platform.name }} image"
+          else
+            platform_image_name="${{ inputs.image }}-${{ matrix.platform.name }}"
+            echo "Building ${{ matrix.platform.name }} image [${platform_image_name}]"
+
+            echo "platform_image=${platform_image_name}" >> $GITHUB_OUTPUT
+          fi
+
       - name: Checkout repository
         uses: actions/checkout@v4
+        if: 'steps.if-build-platform.outputs.platform_image'
 
       - name: Image name
-        run: echo "Image name [${{ inputs.image }}-${{ matrix.platform.name }}]"
+        if: 'steps.if-build-platform.outputs.platform_image'
+        run: echo "Image name [${{ steps.if-build-platform.outputs.platform_image }}]"
 
       - name: Login to DockerHub registry
+        if: 'steps.if-build-platform.outputs.platform_image'
         run: echo ${{ secrets.registry_p }} | docker login -u ${{ secrets.registry_u }} --password-stdin
 
       - name: Set up Docker buildx
         id: buildx
         uses: docker/setup-buildx-action@v3
+        if: 'steps.if-build-platform.outputs.platform_image'
 
       - name: Buildx and push image
+        if: 'steps.if-build-platform.outputs.platform_image'
         env:
           DOCKER_BUILDKIT: 1
           BUILDOPTS: ${{ inputs.buildopts }}
@@ -122,7 +149,16 @@ jobs:
             .
 
       - name: Logout of DockerHub registry
+        if: 'steps.if-build-platform.outputs.platform_image'
         run: docker logout
+
+
+      - name: Platform build summary
+        if: 'steps.if-build-platform.outputs.platform_image'
+        run: |
+          image_fragment="<code>${{ steps.if-build-platform.outputs.platform_image }}</code>"
+          summary="<b>Built and Pushed <code>${{ matrix.platform.name }}</code> Image:</b><br>${image_fragment}"
+          echo "${summary}" >> $GITHUB_STEP_SUMMARY
 
   combine-images:
     name: Create Multiplatform Image
@@ -132,6 +168,14 @@ jobs:
       IMAGE: ${{ inputs.image }}
 
     steps:
+
+      - name: There must be a platform
+        run: |
+         if [ -z "${{ inputs.runner_amd64 }}" ] && [ -z "${{ inputs.runner_arm64 }}" ]; then
+           echo "::error::At least must platform must be built - no platform runner specified"
+           exit 1
+         fi
+
       - name: Login to DockerHub registry
         run: echo ${{ secrets.registry_p }} | docker login -u ${{ secrets.registry_u }} --password-stdin
 
@@ -141,7 +185,10 @@ jobs:
 
       - name: Create and push multiplatform image
         run: |
-          docker pull ${IMAGE} || docker buildx imagetools create -t ${IMAGE} ${IMAGE}-amd64 ${IMAGE}-arm64
+          IMAGES=''
+          [ -n "${{ inputs.runner_amd64 }}" ] && IMAGES="${IMAGES} ${{ inputs.image }}-${{ inputs.amd64_tag }}"
+          [ -n "${{ inputs.runner_arm64 }}" ] && IMAGES="${IMAGES} ${{ inputs.image }}-${{ inputs.arm64_tag }}"
+          docker pull ${IMAGE} || docker buildx imagetools create -t ${IMAGE} ${IMAGES}
 
       - name: Logout of DockerHub registry
         run: docker logout
