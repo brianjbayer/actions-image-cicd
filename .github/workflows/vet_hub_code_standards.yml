@@ -1,0 +1,88 @@
+name: Vet Code Standards
+
+on:
+  workflow_call:
+
+    secrets:
+      registry_u:
+        description: The username for the docker login
+        required: true
+      registry_p:
+        description: The password (PAT) for the docker login
+        required: true
+
+    inputs:
+      runner:
+        description: "The type of runner for this workflow (Default: ubuntu-latest)"
+        required: false
+        type: string
+        default: ubuntu-latest
+      lint_command:
+        description: The command to vet linting
+        required: false
+        type: string
+      dependency_security_command:
+        description: The command to vet dependency security
+        required: false
+        type: string
+      static_security_command:
+        description: The command to vet static security analysis
+        required: false
+        type: string
+      tests_command:
+        description: The command to run the tests
+        required: false
+        type: string
+
+jobs:
+  vet-linting:
+    name: Linting
+    if: ${{ inputs.lint_command != '' }}
+    uses: ./.github/workflows/run_hub_command.yml
+    with:
+      runner: ${{ inputs.runner }}
+      title: Vet Linting
+      command_title: Run lint
+      command: ${{ inputs.lint_command }}
+    secrets:
+      registry_u: ${{ secrets.registry_u }}
+      registry_p: ${{ secrets.registry_p }}
+
+  vet-dependency-security:
+    name: Dependency Security
+    if: ${{ inputs.dependency_security_command != '' }}
+    uses: ./.github/workflows/run_hub_command.yml
+    with:
+      runner: ${{ inputs.runner }}
+      title: Vet Dependency Security
+      command_title: Run dependency security scan
+      command: ${{ inputs.dependency_security_command }}
+    secrets:
+      registry_u: ${{ secrets.registry_u }}
+      registry_p: ${{ secrets.registry_p }}
+
+  vet-static-security:
+    name: Static Security
+    if: ${{ inputs.static_security_command != '' }}
+    uses: ./.github/workflows/run_hub_command.yml
+    with:
+      runner: ${{ inputs.runner }}
+      title: Vet Static Security
+      command_title: Run static security scan
+      command: ${{ inputs.static_security_command }}
+    secrets:
+      registry_u: ${{ secrets.registry_u }}
+      registry_p: ${{ secrets.registry_p }}
+
+  run-tests:
+    name: Tests
+    if: ${{ inputs.tests_command != '' }}
+    uses: ./.github/workflows/run_hub_command.yml
+    with:
+      runner: ${{ inputs.runner }}
+      title: Run Tests
+      command_title: Run tests
+      command: ${{ inputs.tests_command }}
+    secrets:
+      registry_u: ${{ secrets.registry_u }}
+      registry_p: ${{ secrets.registry_p }}

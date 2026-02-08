@@ -1,0 +1,51 @@
+name: Idempotent Copy (Promote) Image
+
+on:
+  workflow_call:
+
+    secrets:
+      registry_u:
+        description: The username for the docker login
+        required: true
+      registry_p:
+        description: The password (PAT) for the docker login
+        required: true
+
+    inputs:
+      runner:
+        description: "The type of runner for this workflow (Default: ubuntu-latest)"
+        required: false
+        type: string
+        default: ubuntu-latest
+      title:
+        description: "The title for the command being run"
+        required: false
+        type: string
+        default: Run Command
+      command:
+        description: The command to run
+        required: true
+        type: string
+      command_title:
+        description: The title for the run command step
+        required: false
+        type: string
+        default: Run
+
+jobs:
+  login-docker-hub-run-command:
+    name: ${{ inputs.title }}
+    runs-on: ${{ inputs.runner }}
+
+    steps:
+      - name: Login to DockerHub registry
+        run: echo ${{ secrets.registry_p }} | docker login -u ${{ secrets.registry_u }} --password-stdin
+
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: ${{ inputs.command_title }}
+        run: ${{ inputs.command }}
+
+      - name: Logout of DockerHub registry
+        run: docker logout
