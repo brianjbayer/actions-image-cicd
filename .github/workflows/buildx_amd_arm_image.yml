@@ -93,11 +93,22 @@ jobs:
     - name: Verify a platform
       run: |
         if [ -z "${{ steps.if-build.outputs.amd-name }}" ] && [ -z "${{ steps.if-build.outputs.arm-name }}" ]; then
+          # Error: No platforms to build
+
           error_message='At least one platform must be built - no platform runners specified'
           echo "${error_message}"
+
+          # Annotate error
           echo "::error::${error_message}"
+
+          # Summary of error
+          summary="<b>:x: ${error_message}</b>"
+          echo "${summary}" >> $GITHUB_STEP_SUMMARY
+
+          # EXIT
           exit 1
         fi
+
         echo "AMD Platform Image: [${{ steps.if-build.outputs.amd-name }}]"
         echo "ARM Platform Image: [${{ steps.if-build.outputs.arm-name }}]"
 
