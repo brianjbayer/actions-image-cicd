@@ -7,7 +7,7 @@ on:
 
 jobs:
 
-    # --- Git and GitHub Info ---
+  # --- Git and GitHub Info ---
 
   check-git_github_info:
     name: Check Git and GitHub Info

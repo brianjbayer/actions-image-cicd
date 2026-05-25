@@ -1,0 +1,39 @@
+name: Merge Commit PR Info
+description: "Returns information about the PR for the merge commit"
+
+inputs:
+  github-owner-repo:
+    description: "The owner/repository of the PR"
+    required: true
+  merge-commit-sha:
+    description: "The commit merging the PR"
+    required: true
+
+  # Secrets
+  github-token:
+    description: "Github Repository Access Token (e.g. secrets.GITHUB_TOKEN)"
+    required: true
+
+outputs:
+  number:
+    description: "PR number"
+  title:
+    description: "PR Title"
+  url:
+    description: "PR URL"
+  branch:
+    description: "PR Branch (head.ref)"
+  last-commit:
+    description: "Last commit on PR Branch"
+  base-branch:
+    description: "Target branch of PR merge (base.ref)"
+  base-last-commit:
+    description: "Last commit on base branch before merge"
+
+runs:
+  using: docker
+  image: Dockerfile
+  env:
+    GITHUB_OWNER_REPOSITORY: ${{ inputs.github-owner-repo }}
+    MERGE_COMMIT: ${{ inputs.merge-commit-sha }}
+    GITHUB_TOKEN: ${{ inputs.github-token }}

@@ -2,6 +2,15 @@ name: Copy Image To Latest
 
 on:
   workflow_call:
+
+    secrets:
+      registry_u:
+        description: The username for the docker login
+        required: true
+      registry_p:
+        description: The password (PAT) for the docker login
+        required: true
+
     inputs:
       runner:
         description: "The type of runner for this workflow (Default: ubuntu-latest)"
@@ -12,13 +21,6 @@ on:
         description: The image to copy to latest
         required: true
         type: string
-    secrets:
-      registry_u:
-        description: The username for the docker login
-        required: true
-      registry_p:
-        description: The password (PAT) for the docker login
-        required: true
 
 jobs:
 

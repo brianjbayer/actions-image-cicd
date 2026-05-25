@@ -2,6 +2,15 @@ name: Delete Image Repositories
 
 on:
   workflow_call:
+
+    secrets:
+      registry_u:
+        description: The username for the docker login
+        required: true
+      registry_p:
+        description: The password (PAT) for the docker login
+        required: true
+
     inputs:
       runner:
         description: "The type of runner for this workflow (Default: ubuntu-latest)"
@@ -22,14 +31,6 @@ on:
         required: false
         type: string
 
-    secrets:
-      registry_u:
-        description: The username for the docker login
-        required: true
-      registry_p:
-        description: The password (PAT) for the docker login
-        required: true
-
 jobs:
   delete-image-repository:
     name: Delete ${{ matrix.repository }}
@@ -42,7 +43,7 @@ jobs:
 
     steps:
       - name: Checkout action repository
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           repository: brianjbayer/actions-image-cicd
           ref: ${{ inputs.ref }}

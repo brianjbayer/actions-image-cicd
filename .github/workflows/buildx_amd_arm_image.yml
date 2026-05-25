@@ -29,11 +29,31 @@ on:
         required: false
         type: string
         default: ubuntu-latest
+      amd64_tag:
+        description: "The amd64 architecture tag/name (amd64)"
+        required: false
+        type: string
+        default: amd64
+      amd64_platform:
+        description: "The amd64 platform(linux/amd64)"
+        required: false
+        type: string
+        default: linux/amd64
       runner_arm64:
         description: "The type of linux/arm64 runner for this workflow (ubuntu-24.04-arm)"
         required: false
         type: string
         default: ubuntu-24.04-arm
+      arm64_tag:
+        description: "The arm64 architecture tag/name"
+        required: false
+        type: string
+        default: arm64
+      arm64_platform:
+        description: "The arm64 platform(linux/arm64)"
+        required: false
+        type: string
+        default: linux/arm64
       summary:
         description: "Add a summary report to the workflow run (true)"
         required: false
@@ -55,31 +75,81 @@ on:
 
 jobs:
 
+  platform-image-names:
+   name: Set the platform image name if building
+   runs-on: ${{ inputs.runner_general }}
+   env:
+    AMD_IMAGE: ${{ inputs.image }}-${{ inputs.amd64_tag }}
+    ARM_IMAGE: ${{ inputs.image }}-${{ inputs.arm64_tag }}
+   outputs:
+    amd-name: ${{ steps.if-build.outputs.amd-name }}
+    arm-name: ${{ steps.if-build.outputs.arm-name }}
+   steps:
+    - id: if-build
+      run: |
+        [ -n "${{ inputs.runner_amd64 }}" ] && echo "amd-name=${AMD_IMAGE}" >> $GITHUB_OUTPUT || true
+        [ -n "${{ inputs.runner_arm64 }}" ] && echo "arm-name=${ARM_IMAGE}" >> $GITHUB_OUTPUT || true
+
+    - name: Verify a platform
+      run: |
+        if [ -z "${{ steps.if-build.outputs.amd-name }}" ] && [ -z "${{ steps.if-build.outputs.arm-name }}" ]; then
+          # Error: No platforms to build
+
+          error_message='At least one platform must be built - no platform runners specified'
+          echo "${error_message}"
+
+          # Annotate error
+          echo "::error::${error_message}"
+
+          # Summary of error
+          summary="<b>:x: ${error_message}</b>"
+          echo "${summary}" >> $GITHUB_STEP_SUMMARY
+
+          # EXIT
+          exit 1
+        fi
+
+        echo "AMD Platform Image: [${{ steps.if-build.outputs.amd-name }}]"
+        echo "ARM Platform Image: [${{ steps.if-build.outputs.arm-name }}]"
+
   buildx-and-push-image:
     name: Build and Push Platform Image
-    runs-on: ${{ matrix.platform.runner }}
+    needs: platform-image-names
+    runs-on: ${{ matrix.platform.runner || inputs.runner_general }}
     strategy:
       fail-fast: false
       matrix:
         platform:
-          - name: amd64
+          - name: ${{ inputs.amd64_tag }}
             runner: ${{ inputs.runner_amd64 }}
-          - name: arm64
+            image: ${{ needs.platform-image-names.outputs.amd-name }}
+            value: ${{ inputs.amd64_platform }}
+          - name: ${{ inputs.arm64_tag }}
             runner: ${{ inputs.runner_arm64 }}
+            image: ${{ needs.platform-image-names.outputs.arm-name }}
+            value: ${{ inputs.arm64_platform }}
+
     steps:
-      - uses: actions/checkout@v4
+
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        if:  matrix.platform.image
 
       - name: Image name
-        run: echo "Image name [${{ inputs.image }}-${{ matrix.platform.name }}]"
+        if:  matrix.platform.image
+        run: echo "Image name [${{ matrix.platform.image }}]"
 
       - name: Login to DockerHub registry
+        if:  matrix.platform.image
         run: echo ${{ secrets.registry_p }} | docker login -u ${{ secrets.registry_u }} --password-stdin
 
       - name: Set up Docker buildx
         id: buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
+        if:  matrix.platform.image
 
       - name: Buildx and push image
+        if:  matrix.platform.image
         env:
           DOCKER_BUILDKIT: 1
           BUILDOPTS: ${{ inputs.buildopts }}
@@ -112,34 +182,49 @@ jobs:
           echo "Build options..."
           echo ["${BUILDOPTS}"]
 
-          docker pull ${{ inputs.image }}-${{ matrix.platform.name }} \
+          docker pull ${{ matrix.platform.image }} \
           || docker buildx build \
             ${BUILDOPTS} \
-            --push --platform linux/${{ matrix.platform.name }} \
-            --tag ${{ inputs.image }}-${{ matrix.platform.name }} \
+            --push --platform ${{ matrix.platform.value }} \
+            --tag ${{ matrix.platform.image }} \
             .
 
       - name: Logout of DockerHub registry
+        if:  matrix.platform.image
         run: docker logout
+
+      - name: Platform build summary
+        if:  matrix.platform.image
+        run: |
+          image_fragment="<code>${{ matrix.platform.image }}</code>"
+          summary="<b>Built and Pushed <code>${{ matrix.platform.name }}</code> Image:</b><br>${image_fragment}"
+          echo "${summary}" >> $GITHUB_STEP_SUMMARY
 
   combine-images:
     name: Create Multiplatform Image
     runs-on: ${{ inputs.runner_general }}
-    needs: buildx-and-push-image
+    needs:
+      - platform-image-names
+      - buildx-and-push-image
     env:
       IMAGE: ${{ inputs.image }}
+      AMD_IMAGE: ${{ needs.platform-image-names.outputs.amd-name }}
+      ARM_IMAGE: ${{ needs.platform-image-names.outputs.arm-name }}
 
     steps:
+
       - name: Login to DockerHub registry
         run: echo ${{ secrets.registry_p }} | docker login -u ${{ secrets.registry_u }} --password-stdin
 
       - name: Set up Docker buildx
         id: buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
 
       - name: Create and push multiplatform image
         run: |
-          docker pull ${IMAGE} || docker buildx imagetools create -t ${IMAGE} ${IMAGE}-amd64 ${IMAGE}-arm64
+          # AT least one platform image is expected/must exist
+          PLATFORM_IMAGES="${AMD_IMAGE} ${ARM_IMAGE}"
+          docker pull ${IMAGE} || docker buildx imagetools create -t ${IMAGE} ${PLATFORM_IMAGES}
 
       - name: Logout of DockerHub registry
         run: docker logout

@@ -38,7 +38,8 @@ jobs:
       IMAGE: ${{ inputs.image }}
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v6
 
       - name: Image name
         run: echo "Image name [${IMAGE}]"
@@ -51,7 +52,7 @@ jobs:
 
       - name: Set up Docker buildx
         id: buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
 
       - name: If not pull image, buildx and push image
         env:
