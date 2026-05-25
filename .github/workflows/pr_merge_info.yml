@@ -1,0 +1,141 @@
+name: PR Merge Info
+
+on:
+  workflow_call:
+
+    secrets:
+      github-token:
+        description: "Github Repository Access Token"
+        required: true
+
+    inputs:
+      github-owner-repo:
+        description: "The owner/repository of the PR"
+        required: false
+        type: string
+        default: ${{ github.repository }}
+
+      runner:
+        description: "The type of runner for this workflow (Default: ubuntu-latest)"
+        required: false
+        type: string
+        default: ubuntu-latest
+      summary:
+        description: "Add a summary report to the workflow run (Default: true)"
+        required: false
+        type: boolean
+        default: true
+      ref:
+        description: "The git reference for the action"
+        required: false
+        type: string
+      # TESTING: TODO set default: BRANCH
+
+    outputs:
+      branch:
+        description: The name of the merged branch (from merge comment)
+        value: ${{ jobs.merge-information.outputs.branch }}
+      last-commit:
+        description: The last commit on the branch (commit before merge commit)
+        value: ${{ jobs.merge-information.outputs.last-commit }}
+      merge-commit:
+        description: The last commit on the branch (commit before merge commit)
+        value: ${{ jobs.merge-information.outputs.merge-commit }}
+      pr-number:
+        description: "PR number"
+        value: ${{ jobs.merge-information.outputs.number }}
+      pr-title:
+        description: "PR Title"
+        value: ${{ jobs.merge-information.outputs.title }}
+      pr-url:
+        description: "PR URL"
+        value: ${{ jobs.merge-information.outputs.url }}
+      base-branch:
+        description: "Target branch of PR merge (base.ref)"
+        value: ${{ jobs.merge-information.outputs.base-branch }}
+      base-last-commit:
+        description: "Last commit on base branch before merge"
+        value: ${{ jobs.merge-information.outputs.base-last-commit }}
+
+jobs:
+  merge-information:
+    name: Merge Information
+    runs-on: ${{ inputs.runner }}
+    outputs:
+      last-commit: ${{ steps.git-log.outputs.last-commit }}
+      merge-commit: ${{ steps.git-log.outputs.merge-commit }}
+
+      branch: ${{ steps.merge-commit-pr.outputs.branch }}
+      number: ${{ steps.merge-commit-pr.outputs.number }}
+      title: ${{ steps.merge-commit-pr.outputs.title }}
+      url: ${{ steps.merge-commit-pr.outputs.url }}
+      base-branch: ${{ steps.merge-commit-pr.outputs.base-branch }}
+      base-last-commit: ${{ steps.merge-commit-pr.outputs.base-last-commit }}
+
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: The git log is the source of truth
+        id: git-log
+        run: |
+          echo "git log..."
+          git log
+
+          echo " --- "
+
+          merge_commit=$(git log -1 --pretty=%H)
+          echo "merge_commit: [$merge_commit]"
+          echo "merge-commit=${merge_commit}" >> $GITHUB_OUTPUT
+
+          echo " --- "
+
+          last_commit=$(git log -n 1 --skip 1 --pretty=format:"%H")
+          echo "last_commit: [$last_commit]"
+          echo "last-commit=${last_commit}" >> $GITHUB_OUTPUT
+
+      - name: Merge and last commit before merge
+        run: |
+          echo "Merge Commit [${{ steps.git-log.outputs.merge-commit }}]"
+          echo "Last Commit [${{ steps.git-log.outputs.last-commit }}]"
+
+      - name: Checkout action repository
+        uses: actions/checkout@v6
+        with:
+          repository: brianjbayer/actions-image-cicd
+          ref: ${{ inputs.ref }}
+          path: action-repo
+
+      - name: GitHub PR
+        id: merge-commit-pr
+        uses: ./action-repo/.github/actions/merge-commit-pr-info
+        with:
+          github_owner_repo: ${{ inputs.github-owner-repo }}
+          merge-commit-sha: ${{ steps.git-log.outputs.merge-commit }}
+          ref: ${{ inputs.ref }}
+          # Secrets
+          github-token: ${{ secrets.github-token }}
+
+      - name: Summary report
+        if: ${{ inputs.summary == true }}
+        run: |
+          cat <<EOF >> $GITHUB_STEP_SUMMARY
+          ### Merge Information
+
+          For ${{ github.repository }}
+
+          #### Git Log
+
+          * Merge Commit:              `${{ steps.git-log.outputs.merge-commit }}`
+          * Last Commit Before Merge : `${{ steps.git-log.outputs.last-commit }}`
+
+          #### PR Info
+
+          **PR# ${{ steps.merge-commit-pr.outputs.number }}: ${{ steps.merge-commit-pr.outputs.title }}**
+
+          URl: ${{ steps.merge-commit-pr.outputs.url }}
+
+          Merges branch `${{ steps.merge-commit-pr.outputs.branch }}` into `${{ steps.merge-commit-pr.outputs.base-branch }}`
+          at commit `${{ steps.git-log.outputs.merge-commit }}`, previous commit `${{ steps.merge-commit-pr.outputs.base-last-commit }}`
+          EOF
