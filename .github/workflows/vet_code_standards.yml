@@ -32,7 +32,7 @@ jobs:
     if: ${{ inputs.lint_command != '' }}
     runs-on: ${{ inputs.runner }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: "Lint [ ${{ inputs.lint_command }} ]"
         run: ${{ inputs.lint_command }}
 
@@ -41,7 +41,7 @@ jobs:
     if: ${{ inputs.dependency_security_command != '' }}
     runs-on: ${{ inputs.runner }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: "Dependency Scan [ ${{ inputs.dependency_security_command }} ]"
         run: ${{ inputs.dependency_security_command }}
 
@@ -50,7 +50,7 @@ jobs:
     if: ${{ inputs.static_security_command != '' }}
     runs-on: ${{ inputs.runner }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: "Vet Static Security [ ${{ inputs.static_security_command }} ]"
         run: ${{ inputs.static_security_command }}
 
@@ -59,6 +59,6 @@ jobs:
     if: ${{ inputs.tests_command != '' }}
     runs-on: ${{ inputs.runner }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: "Vet Tests [ ${{ inputs.tests_command }} ]"
         run: ${{ inputs.tests_command }}

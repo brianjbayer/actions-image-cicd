@@ -61,7 +61,7 @@ jobs:
             runner: ${{ inputs.runner_arm64 }}
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Build cache name
         run: echo "Build cache name [${{ inputs.build_cache_name }}-${{ matrix.platform.name }}]"
