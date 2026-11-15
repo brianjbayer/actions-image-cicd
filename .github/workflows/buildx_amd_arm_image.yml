@@ -67,7 +67,7 @@ jobs:
           - name: arm64
             runner: ${{ inputs.runner_arm64 }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Image name
         run: echo "Image name [${{ inputs.image }}-${{ matrix.platform.name }}]"
@@ -77,7 +77,7 @@ jobs:
 
       - name: Set up Docker buildx
         id: buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
 
       - name: Buildx and push image
         env:
@@ -135,7 +135,7 @@ jobs:
 
       - name: Set up Docker buildx
         id: buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
 
       - name: Create and push multiplatform image
         run: |
