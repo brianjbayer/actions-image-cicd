@@ -25,9 +25,9 @@ Idempotent multi-platform amd64/arm64 image build and push workflow.
 
 - `image` - Name of the image to build and push (required)
 - `buildopts` - Optional docker buildx options (e.g. --target)
-- `runner_general` - Runner for general jobs (default: ubuntu-24.04-arm)
+- `runner_general` - Runner for general jobs (default: ubuntu-26.04-arm)
 - `runner_amd64` - Runner for linux/amd64 builds (default: ubuntu-latest)
-- `runner_arm64` - Runner for linux/arm64 builds (default: ubuntu-24.04-arm)
+- `runner_arm64` - Runner for linux/arm64 builds (default: ubuntu-26.04-arm)
 - `summary` - Add summary report (default: true)
 - `edge_build_cache_name` - Edge build cache name (optional)
 - `root_build_cache_name` - Root build cache name (optional)
@@ -131,9 +131,9 @@ Refresh amd64 and arm64 registry build cache.
 - `build_cache_name` - Registry build cache name to recreate (required)
 - `ref` - Git reference for build cache source (default: HEAD)
 - `buildopts_list` - JSON array of docker buildx options (e.g. ["", "--target"])
-- `runner_general` - Runner for general jobs (default: ubuntu-24.04-arm)
+- `runner_general` - Runner for general jobs (default: ubuntu-26.04-arm)
 - `runner_amd64` - Runner for linux/amd64 builds (default: ubuntu-latest)
-- `runner_arm64` - Runner for linux/arm64 builds (default: ubuntu-24.04-arm)
+- `runner_arm64` - Runner for linux/arm64 builds (default: ubuntu-26.04-arm)
 - `summary` - Add summary report (default: true)
 
 **Secrets:**
