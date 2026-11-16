@@ -20,20 +20,20 @@ on:
         description: Optional docker buildx options e.g. --target
         type: string
       runner_general:
-        description: "The type of runner for the general jobs in workflow (ubuntu-24.04-arm)"
+        description: "The type of runner for the general jobs in workflow (ubuntu-26.04-arm)"
         required: false
         type: string
-        default: ubuntu-24.04-arm
+        default: ubuntu-26.04-arm
       runner_amd64:
         description: "The type of linux/amd64 runner for this workflow (ubuntu-latest)"
         required: false
         type: string
         default: ubuntu-latest
       runner_arm64:
-        description: "The type of linux/arm64 runner for this workflow (ubuntu-24.04-arm)"
+        description: "The type of linux/arm64 runner for this workflow (ubuntu-26.04-arm)"
         required: false
         type: string
-        default: ubuntu-24.04-arm
+        default: ubuntu-26.04-arm
       summary:
         description: "Add a summary report to the workflow run (true)"
         required: false
@@ -67,7 +67,7 @@ jobs:
           - name: arm64
             runner: ${{ inputs.runner_arm64 }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Image name
         run: echo "Image name [${{ inputs.image }}-${{ matrix.platform.name }}]"
@@ -77,7 +77,7 @@ jobs:
 
       - name: Set up Docker buildx
         id: buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
 
       - name: Buildx and push image
         env:
@@ -135,7 +135,7 @@ jobs:
 
       - name: Set up Docker buildx
         id: buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
 
       - name: Create and push multiplatform image
         run: |

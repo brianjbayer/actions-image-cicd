@@ -8,6 +8,11 @@ on:
         required: false
         type: string
         default: ubuntu-latest
+      summary:
+        description: Whether to provide a Github Step Summary
+        required: false
+        type: boolean
+        default: false
 
     outputs:
       branch:
@@ -16,30 +21,64 @@ on:
       commit:
         description: The last commit on the branch (commit before merge commit)
         value: ${{ jobs.merged-branch-commit.outputs.commit }}
+      merge_commit:
+        description: The commit SHA of the merged branch
+        value: ${{ jobs.merged-branch-commit.outputs.merge_commit }}
 
 jobs:
   merged-branch-commit:
     name: Determine Merged Branch and Last Commit on Branch
     runs-on: ${{ inputs.runner }}
     outputs:
-      branch: ${{ steps.getbranch.outputs.branch }}
-      commit: ${{ steps.getcommit.outputs.commit }}
+      branch: ${{ steps.get-commits-from-log.outputs.branch }}
+      commit: ${{ steps.get-commits-from-log.outputs.commit }}
+      merge_commit: ${{ steps.get-commits-from-log.outputs.merge_commit }}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
-      - id: getbranch
-        run: echo "branch=$(git log -1 --pretty=%B | grep 'Merge pull request' | sed 's/^[^/]*\///')" >> $GITHUB_OUTPUT
-      - id: getcommit
-        run: echo "commit=$(git log -n 1 --skip 1 --pretty=format:"%H")" >> $GITHUB_OUTPUT
+      - name: Git log is source of truth
+        run: git log
 
-      - name: Debug
+      - name: Get values from git log
+        id: get-commits-from-log
         run: |
-          echo "$(git log -1 --pretty=%B | grep 'Merge pull request' | sed 's/^[^/]*\///')"
-          echo "branch [${{ steps.getbranch.outputs.branch }}]"
-          echo "$(git log -n 1 --skip 1 --pretty=format:"%H")"
-          echo "commit [${{ steps.getcommit.outputs.commit }}]"
-          echo "git log..."
-          git log
+          # Merge commit
+          merge_commit=$(git log -1 --pretty=%H)
+          echo "merge_commit: [${merge_commit}]"
+          echo "merge_commit=${merge_commit}" >> $GITHUB_OUTPUT
+
+          # Last commit
+          # The last commit of the merged branch is the merge commit's second parent
+          if ! last_commit=$(git rev-parse --verify --quiet "${merge_commit}^2"); then
+            message="❌ Expected ${merge_commit} to be a merge commit - It is NOT!"
+            echo "${message}"
+            echo "::error::${message}"
+            echo "### ❌ Merged Branch and Last Commit SHA of Branch Failed" >> $GITHUB_STEP_SUMMARY
+            echo "${message}" >> $GITHUB_STEP_SUMMARY
+            exit 1
+          fi
+
+          echo "(last) commit: [${last_commit}]"
+          echo "commit=${last_commit}" >> $GITHUB_OUTPUT
+
+          # Branch
+          branch=$(git log -1 --pretty=%B | grep 'Merge pull request' | sed 's/^[^/]*\///')
+          echo "branch: [${branch}]"
+          echo "branch=${branch}" >> $GITHUB_OUTPUT
+
+      - name: Branch, last commit, and merge commit
+        run: |
+          echo "branch [${{steps.get-commits-from-log.outputs.branch}}]"
+          echo "commit [${{ steps.get-commits-from-log.outputs.commit }}]"
+          echo "merge_commit [${{ steps.get-commits-from-log.outputs.merge_commit }}]"
+
+      - name: Summary report
+        if: ${{ inputs.summary }}
+        run: |
+          echo "### Merged Branch and Last Commit SHA of Branch Failed" >> $GITHUB_STEP_SUMMARY
+            echo "Merge Commit:  [\`${{ steps.get-commits-from-log.outputs.merge_commit }}\`]" >> $GITHUB_STEP_SUMMARY
+            echo "(Last) Commit: [\`${{ steps.get-commits-from-log.outputs.commit }}\`]" >> $GITHUB_STEP_SUMMARY
+            echo "Branch:        [\`${{steps.get-commits-from-log.outputs.branch}}\`]" >> $GITHUB_STEP_SUMMARY
